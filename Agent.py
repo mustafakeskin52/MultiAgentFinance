@@ -1,5 +1,6 @@
 import time
 import numpy as np
+import pandas as pd
 from osbrain import run_agent
 from osbrain import run_nameserver
 from osbrain import Agent
@@ -66,8 +67,7 @@ class LinearRegAgent(Model):
         self.log_info('ReceivedFromServer: %s' % receivingObjectFromServer.message)
         self.dataMemory.append(receivingObjectFromServer.message)
 
-    def evaluate_behaviour(self):
-        lastN = 3
+    def evaluate_behaviour(self,lastN):
         t = len(self.dataMemory)
         time = np.arange(t - lastN, t, 1)
         time = time.reshape(-1, 1)
@@ -114,14 +114,21 @@ def getAgentList(modelLists):
     for i in range(len(modelsList)):
         agentLists.append(modelsList[i].uniqueId)
     return agentLists
+
+def evaluateAgentsBehaviours():
+    return None
+def readDataFromCSV(path):
+   spy = pd.read_csv(path)
+   data = spy['Adj Close'].values.astype(float)
+   return data
 if __name__ == '__main__':
 
     modelsList = []
     # System deployment
     ns = run_nameserver()
     model1 = run_agent('Model1', base=LinearRegAgent)
-    model2 = run_agent('Model2', base=Model)
-    model3 = run_agent('Model3',base=Model)
+    model2 = run_agent('Model2', base=LinearRegAgent)
+    model3 = run_agent('Model3',base=LinearRegAgent)
     server = run_agent('Server', base=Server)
 
     model1.uniqueId = "model1"
@@ -137,15 +144,15 @@ if __name__ == '__main__':
     m1 = MessageType()
 
     agentlist = getAgentList(modelsList)#all agent names have been stored in this list
-
-    for _ in range(30):
-
-        m1.message = 5
+    data = readDataFromCSV("AMD.CSV")
+    for i in range(100):
+        #In the loop for testing some probabilities
+        m1.message = data[i]
         server.server_broadcast(m1)
 
-        modelsList[0].evaluate_behaviour()
-        print(modelsList[0].get_behaviourstate())
-
+        modelsList[0].evaluate_behaviour(3)
+        modelsList[1].evaluate_behaviour(5)
+        modelsList[2].evaluate_behaviour(7)
         #example code
         #sendingObjectList = {"model1": m1, "model2": None, "model3": m1}
         #m1.message = 5
@@ -154,5 +161,10 @@ if __name__ == '__main__':
         #m1.message = 7
         #m1.senderId = "model2"
         #communicateALLAgents(modelsList,  m1.senderId, sendingObjectList)
-        #time.sleep(1)
+        time.sleep(1)
+        print("realIncereasing: ",(data[i+1] - data[i]))
+        print("model1: " ,modelsList[0].get_behaviourstate())
+        print("model2: " , modelsList[1].get_behaviourstate())
+        print("model3: " , modelsList[2].get_behaviourstate())
+        #print(modelsList[0].get_datamemory())
     ns.shutdown()

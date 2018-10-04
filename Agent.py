@@ -6,7 +6,6 @@ from osbrain import run_nameserver
 from osbrain import Agent
 from sklearn import linear_model
 
-
 class MessageType:
     message = 56
     senderId = ""
@@ -53,7 +52,37 @@ class Model(Agent):
         return self.dataMemory
     def get_behaviourstate(self):
         return self.behaviourState
+class EvaluaterAgent(Model):
+    agentPredictionList = {}
+    diffRealBehaviourValue = []
+    overallscoreAgents = {}
 
+    def receive_agent_message(self,recevingObjectFromAgent):
+
+        if self.agentPredictionList.__contains__(recevingObjectFromAgent.senderId):
+            self.agentPredictionList[recevingObjectFromAgent.senderId].append(recevingObjectFromAgent.message)
+        else:
+            self.agentPredictionList[recevingObjectFromAgent.senderId] = [recevingObjectFromAgent.message]
+        return None
+    def getScores(self):
+        for key in self.agentPredictionList:
+            tempPredictionList = np.asarray(self.agentPredictionList[key])
+            realList = np.asarray(self.diffRealBehaviourValue)
+            self.overallscoreAgents[key] = np.sum(tempPredictionList * realList >= 0) / len(realList)
+        return self.overallscoreAgents
+    def update(self):
+        lenghtMemory = len(self.dataMemory)
+        #To calculate difference between last value and
+        if len(self.diffRealBehaviourValue) != lenghtMemory - 1:
+            if self.dataMemory[lenghtMemory - 1] - self.dataMemory[lenghtMemory - 2] > 0:
+                 self.diffRealBehaviourValue.append(1)
+            if self.dataMemory[lenghtMemory - 1] - self.dataMemory[lenghtMemory - 2] <= 0:
+                self.diffRealBehaviourValue.append(-1)
+        self.getScores()
+        print(self.overallscoreAgents)
+    def receive_server_broadcast_message(self, receivingObjectFromServer):
+        self.log_info('ReceivedFromServer: %s' % receivingObjectFromServer.message)
+        self.dataMemory.append(receivingObjectFromServer.message)
 
 #A model might extend to class that is a abstract agent model including basic layouts
 class LinearRegAgent(Model):
@@ -129,15 +158,17 @@ if __name__ == '__main__':
     model1 = run_agent('Model1', base=LinearRegAgent)
     model2 = run_agent('Model2', base=LinearRegAgent)
     model3 = run_agent('Model3',base=LinearRegAgent)
+    evaluate_agent = run_agent('Evaluater',base=EvaluaterAgent)
     server = run_agent('Server', base=Server)
 
     model1.uniqueId = "model1"
     model2.uniqueId = "model2"
     model3.uniqueId = "model3"
-
+    evaluate_agent.uniqueId = "evaluater"
     modelsList.append(model1)
     modelsList.append(model2)
     modelsList.append(model3)
+    modelsList.append(evaluate_agent)
 
     initialConnectionsAgent(modelsList)
     # Send messages
@@ -145,7 +176,7 @@ if __name__ == '__main__':
 
     agentlist = getAgentList(modelsList)#all agent names have been stored in this list
     data = readDataFromCSV("AMD.CSV")
-    for i in range(100):
+    for i in range(len(data)):
         #In the loop for testing some probabilities
         m1.message = data[i]
         server.server_broadcast(m1)
@@ -154,15 +185,28 @@ if __name__ == '__main__':
         modelsList[1].evaluate_behaviour(5)
         modelsList[2].evaluate_behaviour(7)
         #example code
-        #sendingObjectList = {"model1": m1, "model2": None, "model3": m1}
+        time.sleep(0.1)
+        modelsList[3].update()
+        sendingObjectList = {"model1": None, "model2": None, "model3": None,"evaluater":m1}
+
+        m1.message = modelsList[0].get_behaviourstate()
+        m1.senderId = "model1"
+        communicateALLAgents(modelsList,m1.senderId,sendingObjectList)
+
+        m1.message = modelsList[1].get_behaviourstate()
+        m1.senderId = "model2"
+        communicateALLAgents(modelsList, m1.senderId, sendingObjectList)
+
+        m1.message = modelsList[2].get_behaviourstate()
+        m1.senderId = "model3"
+        communicateALLAgents(modelsList, m1.senderId, sendingObjectList)
         #m1.message = 5
         #m1.senderId = "model1"
         #communicateALLAgents(modelsList, m1.senderId,sendingObjectList)
         #m1.message = 7
         #m1.senderId = "model2"
         #communicateALLAgents(modelsList,  m1.senderId, sendingObjectList)
-        time.sleep(1)
-        print("realIncereasing: ",(data[i+1] - data[i]))
+
         print("model1: " ,modelsList[0].get_behaviourstate())
         print("model2: " , modelsList[1].get_behaviourstate())
         print("model3: " , modelsList[2].get_behaviourstate())

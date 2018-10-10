@@ -101,20 +101,27 @@ class EvaluatorAgent(Model):
 class ImitatorAgent(Model):
     overallScoreAgents = {}
     behaviourOfAgentsNow = {}
+    behaviourOfAgentsAll = {}
+    framePeriodOfData = 30
+
     def receive_agent_message(self,receivingObjectFromAgent):
         if receivingObjectFromAgent != None:
             if receivingObjectFromAgent.messageType == "overAllScores":
                 self.overallScoreAgents = receivingObjectFromAgent.message
             if receivingObjectFromAgent.messageType == "behaviourOfAgentNow":
-                if receivingObjectFromAgent.senderId != None:
-                    self.behaviourOfAgentsNow[receivingObjectFromAgent.senderId] = receivingObjectFromAgent.message
+                if self.behaviourOfAgentsAll.__contains__(receivingObjectFromAgent.senderId):
+                    print(receivingObjectFromAgent.message)
+                    self.behaviourOfAgentsAll[receivingObjectFromAgent.senderId].append(receivingObjectFromAgent.message)
+                else:
+                    self.behaviourOfAgentsAll[receivingObjectFromAgent.senderId] = [receivingObjectFromAgent.message]
+
     def receive_server_broadcast_message(self, receivingObjectFromServer):
         self.log_info('ReceivedFromServer: %s' % receivingObjectFromServer.message)
         self.dataMemory.append(receivingObjectFromServer.message)
     def getoverallScoreAgents(self):
         return self.overallScoreAgents
     def getbehaviourOfAgentsNow(self):
-        return self.behaviourOfAgentsNow
+        return self.behaviourOfAgentsAll
 #A model might extend to class that is a abstract agent model including basic layouts
 class LinearRegAgent(Model):
 
@@ -198,6 +205,7 @@ if __name__ == '__main__':
     model3.uniqueId = "model3"
     evaluate_agent.uniqueId = "evaluater"
     imitator.uniqueId = "imitator"
+
     modelsList.append(model1)
     modelsList.append(model2)
     modelsList.append(model3)
@@ -227,7 +235,6 @@ if __name__ == '__main__':
         m1.senderId = "model1"
         m1.messageType = "behaviourOfAgentNow"
         communicateALLAgents(modelsList,m1.senderId,sendingObjectList)
-
         m1.message = modelsList[1].get_behaviourstate()
         m1.senderId = "model2"
         communicateALLAgents(modelsList, m1.senderId, sendingObjectList)

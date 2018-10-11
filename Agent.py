@@ -11,7 +11,13 @@ class MessageType:
     senderId = ""
     messageType = ""
 
+class BehaviourState:
+        BUY = 1
+        SELL = -1
+        NONE = 0
+
 class Server(Agent):
+
     def on_init(self):
         self.bind('PUB', alias='main')
 
@@ -24,6 +30,7 @@ class Server(Agent):
             self.send('main', None)
 
 class Model(Agent):
+
     uniqueId = ""
     dataMemory = []
     behaviourState = 0
@@ -34,7 +41,7 @@ class Model(Agent):
 
     def connect_to_new_agent(self,connectionAgent,connectionFunction):
         self.connect(connectionAgent.addr('main'),handler = connectionFunction)
-    #
+
     def receive_agent_message(self,receivingObjectFromAgent):
         if receivingObjectFromAgent != None:
             self.log_info('ReceivedFromAgent: %s' % receivingObjectFromAgent.senderId)
@@ -57,10 +64,11 @@ class EvaluatorAgent(Model):
     agentPredictionList = {}
     diffRealBehaviourValue = []
     overallscoreAgents = {}
-    periodicscoreAgents = {}
-    periodOfData = 30
-    def receive_agent_message(self,recevingObjectFromAgent):
+    overallScoresTableAgents = {}
+    periodicScoreTableAgents = {}
+    periodOfData = 15
 
+    def receive_agent_message(self,recevingObjectFromAgent):
         if self.agentPredictionList.__contains__(recevingObjectFromAgent.senderId):
             self.agentPredictionList[recevingObjectFromAgent.senderId].append(recevingObjectFromAgent.message)
         else:
@@ -77,31 +85,38 @@ class EvaluatorAgent(Model):
             for key in self.agentPredictionList:
                 tempPredictionList = np.asarray(self.agentPredictionList[key])
                 realList = np.asarray(self.diffRealBehaviourValue)
-                lengthList = len(realList)
-                self.periodicscoreAgents[key] = np.sum(tempPredictionList[lengthList - self.periodOfData:lengthList] *
-                                                       realList[lengthList - self.periodOfData :lengthList] >= 0) / self.periodOfData
-    def getoverallscoreAgents(self):
-        return self.overallscoreAgents
+                lengthPredictList = len(tempPredictionList)
+                lengthRealList = len(realList)
+                #print(tempPredictionList[lengthPredictList - self.periodOfData:lengthPredictList])
+                agentUpdatePredictionList = (tempPredictionList[lengthPredictList - self.periodOfData:lengthPredictList] *
+                       realList[lengthRealList - self.periodOfData:lengthRealList] >= 0)
+                self.periodicScoreTableAgents[key] = agentUpdatePredictionList
+                #self.overallScoresTableAgents[key].append(self.periodicScoreTableAgents)
+
+    def overallScoresTableAgents(self):
+        return self.overallScoresTableAgents
+    def getPeriodicScoreTableAgents(self):
+        return self.periodicScoreTableAgents
     def update(self):
         lenghtMemory = len(self.dataMemory)
         #To take difference between real datas in the real time
         if len(self.diffRealBehaviourValue) != lenghtMemory - 1:
             if self.dataMemory[lenghtMemory - 1] - self.dataMemory[lenghtMemory - 2] > 0:
-                 self.diffRealBehaviourValue.append(1)
+                 self.diffRealBehaviourValue.append(BehaviourState.BUY)
             if self.dataMemory[lenghtMemory - 1] - self.dataMemory[lenghtMemory - 2] <= 0:
-                self.diffRealBehaviourValue.append(-1)
-        self.getScores()
+                self.diffRealBehaviourValue.append(BehaviourState.SELL)
+        #self.getScores()
         self.calcPeriodicScoresAgents()
-        print("overallScores:",self.overallscoreAgents)
-        print("lastPeriodScores:",self.periodicscoreAgents)
+        #print("overallScores:",self.overallscoreAgents)
+        #print("lastPeriodScores:",self.periodicScoreTableAgents)
 
     def receive_server_broadcast_message(self, receivingObjectFromServer):
         self.log_info('ReceivedFromServer: %s' % receivingObjectFromServer.message)
         self.dataMemory.append(receivingObjectFromServer.message)
 class ImitatorAgent(Model):
     overallScoreAgents = {}
-    behaviourOfAgentsNow = {}
-    behaviourOfAgentsAll = {}
+    behaviourTruthTableNow = {}
+    behaviourTruthTableAll = {}
     framePeriodOfData = 30
 
     def receive_agent_message(self,receivingObjectFromAgent):
@@ -109,19 +124,24 @@ class ImitatorAgent(Model):
             if receivingObjectFromAgent.messageType == "overAllScores":
                 self.overallScoreAgents = receivingObjectFromAgent.message
             if receivingObjectFromAgent.messageType == "behaviourOfAgentNow":
-                if self.behaviourOfAgentsAll.__contains__(receivingObjectFromAgent.senderId):
-                    print(receivingObjectFromAgent.message)
-                    self.behaviourOfAgentsAll[receivingObjectFromAgent.senderId].append(receivingObjectFromAgent.message)
-                else:
-                    self.behaviourOfAgentsAll[receivingObjectFromAgent.senderId] = [receivingObjectFromAgent.message]
+                self.behaviourTruthTableNow = receivingObjectFromAgent.message
+                self.updateBehaviourAllTable()
 
+    def updateBehaviourAllTable(self):
+        for key in self.behaviourTruthTableNow:
+            if self.behaviourTruthTableAll.__contains__(key):
+                self.behaviourTruthTableAll[key].append(self.behaviourTruthTableNow[key])
+            else:
+                self.behaviourTruthTableAll[key] = [self.behaviourTruthTableNow[key]]
     def receive_server_broadcast_message(self, receivingObjectFromServer):
         self.log_info('ReceivedFromServer: %s' % receivingObjectFromServer.message)
         self.dataMemory.append(receivingObjectFromServer.message)
     def getoverallScoreAgents(self):
         return self.overallScoreAgents
-    def getbehaviourOfAgentsNow(self):
-        return self.behaviourOfAgentsAll
+    def getbehaviourTruthTableNow(self):
+        return self.behaviourTruthTableNow
+    def getbehaviourOfAgentsAll(self):
+        return self.behaviourTruthTableAll
 #A model might extend to class that is a abstract agent model including basic layouts
 class LinearRegAgent(Model):
 
@@ -144,9 +164,9 @@ class LinearRegAgent(Model):
             predictionValue = regr.predict(t)
 
             if (predictionValue - self.dataMemory[t-1])> 0:
-                self.behaviourState = 1
+                self.behaviourState = BehaviourState.BUY
             else:
-                self.behaviourState = -1
+                self.behaviourState = BehaviourState.SELL
 
 def initialConnectionsAgent(modelsList):
     # if agent receive a message from server,code will flow to the connectionFunction.
@@ -189,9 +209,7 @@ def readDataFromCSV(path):
    data = spy['Adj Close'].values.astype(float)
    return data
 if __name__ == '__main__':
-
     modelsList = []
-    # System deployment
     ns = run_nameserver()
     model1 = run_agent('Model1', base=LinearRegAgent)
     model2 = run_agent('Model2', base=LinearRegAgent)
@@ -223,13 +241,23 @@ if __name__ == '__main__':
         m1.message = data[i]
         server.server_broadcast(m1)
 
+        modelsList[3].update()
+        print("realIncreasing", data[i] - data[i - 1])
+
+        sendingObjectList = {"model1": None, "model2": None, "model3": None, "evaluater": None, "imitator": m1}
+        m1.message = modelsList[3].getPeriodicScoreTableAgents()
+        # print("list",m1.message)
+        m1.senderId = "evaluater"
+        m1.messageType = "behaviourOfAgentNow"
+
+        communicateALLAgents(modelsList, m1.senderId, sendingObjectList)
+        print(modelsList[4].getbehaviourTruthTableNow())
         modelsList[0].evaluate_behaviour(3)
         modelsList[1].evaluate_behaviour(5)
         modelsList[2].evaluate_behaviour(7)
         #example code
         time.sleep(0.05)
-        modelsList[3].update()
-        sendingObjectList = {"model1": None, "model2": None, "model3": None,"evaluater":m1,"imitator":m1}
+        sendingObjectList = {"model1": None, "model2": None, "model3": None,"evaluater":m1,"imitator":None}
 
         m1.message = modelsList[0].get_behaviourstate()
         m1.senderId = "model1"
@@ -242,14 +270,11 @@ if __name__ == '__main__':
         m1.message = modelsList[2].get_behaviourstate()
         m1.senderId = "model3"
         communicateALLAgents(modelsList, m1.senderId, sendingObjectList)
+        print("model1:",modelsList[0].get_behaviourstate())
+        print("model2:",modelsList[1].get_behaviourstate())
+        print("model3:", modelsList[2].get_behaviourstate())
 
-        sendingObjectList = {"model1": None, "model2": None, "model3": None, "evaluater": None,"imitator":m1}
-        m1.message = modelsList[3].getoverallscoreAgents()
-        m1.senderId = "evaluater"
-        m1.messageType = "overAllScores"
-        communicateALLAgents(modelsList, m1.senderId, sendingObjectList)
         time.sleep(0.05)
-        print("list:",modelsList[4].getbehaviourOfAgentsNow())
-        print("real trend:",data[i+1] - data[i])
+        #print("list:",modelsList[4].getbehaviourOfAgentsAll())
         #print(modelsList[0].get_datamemory())
     ns.shutdown()

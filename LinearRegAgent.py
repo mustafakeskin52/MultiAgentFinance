@@ -18,11 +18,12 @@ class LinearRegAgent(Model):
             self.log_info('ReceivedFromAgent: %s' % receivingObjectFromAgent.message)
 
     def receive_server_broadcast_message(self, receivingObjectFromServer):
-        self.log_info('ReceivedFromServer: %s' % receivingObjectFromServer.message)
-        self.dataMemory.append(receivingObjectFromServer.message)
+        self.log_info('ReceivedFromServer: %s' % receivingObjectFromServer.message[0])
+        self.dataMemory.append(receivingObjectFromServer.message[0])
+        self.dataTime.append(receivingObjectFromServer.message[1])
 
     def evaluate_behaviour(self,lastN):
-        t = len(self.dataMemory)
+        t = self.dataTime[-1]+1
         time = np.arange(t - lastN, t, 1)
         time = time.reshape(-1, 1)
         if t > lastN:

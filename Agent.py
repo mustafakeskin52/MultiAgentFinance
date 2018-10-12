@@ -82,7 +82,7 @@ if __name__ == '__main__':
     data = readDataFromCSV("AMD.CSV")
     for i in range(len(data)):
         #In the loop for testing some probabilities
-        m1.message = data[i]
+        m1.message = [data[i],i]
         server.server_broadcast(m1)
 
         modelsList[3].update()
@@ -112,7 +112,5 @@ if __name__ == '__main__':
         print("model1:",modelsList[0].get_behaviourstate())
         print("model2:",modelsList[1].get_behaviourstate())
         print("model3:", modelsList[2].get_behaviourstate())
-
-        #print("list:",modelsList[4].getbehaviourOfAgentsAll())
-        #print(modelsList[0].get_datamemory())
+        print(modelsList[3].getAgentScores())
     ns.shutdown()

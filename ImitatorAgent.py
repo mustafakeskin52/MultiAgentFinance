@@ -4,7 +4,11 @@ class ImitatorAgent(Model):
     overallScoreAgents = {}
     behaviourTruthTableNow = {}
     behaviourTruthTableAll = {}
-    framePeriodOfData = 30
+    lstmInputSetLastPeriod = []
+    lstmOutputSetY = []
+    lstmOutputSetX = []
+    lstmOutputSetNumpyX = []
+    lstmOutputSetNumpyY = []
 
     def receive_agent_message(self,receivingObjectFromAgent):
         if receivingObjectFromAgent != None:
@@ -20,9 +24,32 @@ class ImitatorAgent(Model):
                 self.behaviourTruthTableAll[key].append(self.behaviourTruthTableNow[key])
             else:
                 self.behaviourTruthTableAll[key] = [self.behaviourTruthTableNow[key]]
+        self.updateListOfTrain()
+        self.listToNumpyArray()
+    #update to data before all process is started
+    def updateListOfTrain(self):
+        if self.lstmInputSetLastPeriod != []:
+            self.lstmOutputSetY.append(self.lstmInputSetLastPeriod[-1,:])
+            self.lstmOutputSetX.append(self.lstmInputSetLastPeriod[:-1,:])
+    #List variables is converted to numpy array variables for giving a lstm network
+    def listToNumpyArray(self):
+        self.lstmInputSetLastPeriod = list(self.behaviourTruthTableNow.values())
+        self.lstmInputSetLastPeriod = np.array(self.lstmInputSetLastPeriod ,dtype=int)
+        self.lstmInputSetLastPeriod = np.transpose(self.lstmInputSetLastPeriod)
+
+        #print(self.lstmOutputSetY)
+        self.lstmOutputSetNumpyY = np.asarray(self.lstmOutputSetY)
+        self.lstmOutputSetNumpyX = np.asarray(self.lstmOutputSetX)
+        print(self.lstmOutputSetNumpyX)
+        print(self.lstmOutputSetNumpyY)
+        #self.lstmOutputSetNumpyX = np.transpose(self.lstmOutputSetNumpyX)
+        #print(self.lstmOutputSetNumpyX)
+        #self.lstmOutputSetNumpyY = np.array(self.lstmOutputSetY, dtype=int)
+        #self.lstmOutputSetNumpyY = np.transpose(self.lstmOutputSetNumpyX)
+
     def receive_server_broadcast_message(self, receivingObjectFromServer):
-        self.log_info('ReceivedFromServer: %s' % receivingObjectFromServer.message)
-        self.dataMemory.append(receivingObjectFromServer.message)
+        self.dataMemory.append(receivingObjectFromServer.message[0])
+        self.dataTime.append(receivingObjectFromServer.message[1])
     def getoverallScoreAgents(self):
         return self.overallScoreAgents
     def getbehaviourTruthTableNow(self):

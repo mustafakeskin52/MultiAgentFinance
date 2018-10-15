@@ -17,7 +17,12 @@ class ImitatorAgent(Model):
             if receivingObjectFromAgent.messageType == "behaviourOfAgentNow":
                 self.behaviourTruthTableNow = receivingObjectFromAgent.message
                 self.updateBehaviourAllTable()
-
+    def saveTrainingVariables(self,pathOfXVariables,pathOfYVariables):
+        np.save(pathOfXVariables, self.lstmOutputSetNumpyX)
+        np.save(pathOfYVariables, self.lstmOutputSetNumpyY)
+    def loadTrainingVaribles(self,pathOfXVariables,pathOfYVariables):
+        self.lstmOutputSetNumpyX = np.load(pathOfXVariables)
+        self.lstmOutputSetNumpyY = np.load(pathOfYVariables)
     def updateBehaviourAllTable(self):
         for key in self.behaviourTruthTableNow:
             if self.behaviourTruthTableAll.__contains__(key):
@@ -37,15 +42,8 @@ class ImitatorAgent(Model):
         self.lstmInputSetLastPeriod = np.array(self.lstmInputSetLastPeriod ,dtype=int)
         self.lstmInputSetLastPeriod = np.transpose(self.lstmInputSetLastPeriod)
 
-        #print(self.lstmOutputSetY)
         self.lstmOutputSetNumpyY = np.asarray(self.lstmOutputSetY)
         self.lstmOutputSetNumpyX = np.asarray(self.lstmOutputSetX)
-        print(self.lstmOutputSetNumpyX)
-        print(self.lstmOutputSetNumpyY)
-        #self.lstmOutputSetNumpyX = np.transpose(self.lstmOutputSetNumpyX)
-        #print(self.lstmOutputSetNumpyX)
-        #self.lstmOutputSetNumpyY = np.array(self.lstmOutputSetY, dtype=int)
-        #self.lstmOutputSetNumpyY = np.transpose(self.lstmOutputSetNumpyX)
 
     def receive_server_broadcast_message(self, receivingObjectFromServer):
         self.dataMemory.append(receivingObjectFromServer.message[0])

@@ -3,6 +3,7 @@ import numpy as np
 import os.path
 import pandas as pd
 import pickle
+import Agent as ag
 from Server import Server
 from LinearRegAgent import LinearRegAgent
 from EvaluatorAgent import EvaluatorAgent
@@ -13,58 +14,6 @@ from osbrain import run_nameserver
 from osbrain import Agent
 from sklearn import linear_model
 
-
-def initialConnectionsAgent(modelsList):
-    # if agent receive a message from server,code will flow to the connectionFunction.
-    # Therefore the parameter must been given truthly to could run the code
-
-    for i in range(len(modelsList)):
-        modelsList[i].on_init_agent(server, 'receive_server_broadcast_message')
-
-    # to use this function for the purpose of connecting a model to another model
-    # one agent is being a listener and another agent is being a publisher
-    # model1.connect_to_new_agent(model2,'receive_message')
-    # model2.connect(model2.addr('main'),handler = 'receive_message')
-
-    for i in range(len(modelsList)):
-        for j in range(len(modelsList)):
-            if i != j:
-                modelsList[i].connect_to_new_agent(modelsList[j], 'receive_agent_message')
-def communicateALLAgents(modelsList,sendingAgent,sendingObjectLists):
-    modelIndex = 0
-    for index in range(len(modelsList)):
-        if modelsList[index].uniqueId == sendingAgent:
-            modelIndex = index;
-            break;
-    for key in sendingObjectLists:
-        if sendingAgent != key:
-            if  sendingObjectLists[key] != None:
-                modelsList[modelIndex].sending_message(sendingObjectLists[key])
-            else:
-                modelsList[modelIndex].sending_message(None)
-def getAgentList(modelLists):
-    agentLists = []
-    for i in range(len(modelsList)):
-        agentLists.append(modelsList[i].uniqueId)
-    return agentLists
-
-def evaluateAgentsBehaviours():
-    return None
-def readDataFromCSV(path):
-   spy = pd.read_csv(path)
-   data = spy['Adj Close'].values.astype(float)
-   return data
-def loadDatas(modelsList,fileName):
-    for i in range(len(modelsList)):
-        if os.path.exists(fileName+str(i)+".npz") == True:
-            modelsList[i].loadALLVariables(fileName+str(i)+".npz")
-    return modelsList
-def saveDatas(modelsList,fileName):
-    for i in range(len(modelsList)):
-        if os.path.exists(fileName + str(i) + ".npz") == True:
-            os.remove(fileName + str(i) + ".npz")
-    for t in range(len(modelsList)):
-        modelsList[t].saveALLVariables(fileName + str(t) + ".npz")
 if __name__ == '__main__':
     modelsList = []
     filePath = "globalsave"
@@ -88,13 +37,13 @@ if __name__ == '__main__':
     modelsList.append(evaluate_agent)
     modelsList.append(imitator)
 
-    initialConnectionsAgent(modelsList)
+    ag.initialConnectionsAgent(modelsList)
     # Send messages
     m1 = MessageType()
     #modelsList = loadDatas(modelsList,filePath)
-    loadDatas(modelsList,filePath)
-    agentlist = getAgentList(modelsList)#all agent names have been stored in this list
-    data = readDataFromCSV("AMD.CSV")
+    ag.loadDatas(modelsList,filePath)
+    agentlist = ag.getAgentList(modelsList)#all agent names have been stored in this list
+    data = ag.readDataFromCSV("AMD.CSV")
     for i in range(1800,len(data),1):
         #In the loop for testing some probabilities
         m1.message = [data[i], i]
@@ -109,7 +58,7 @@ if __name__ == '__main__':
         m1.senderId = "evaluater"
         m1.messageType = "behaviourOfAgentNow"
 
-        communicateALLAgents(modelsList, m1.senderId, sendingObjectList)
+        ag.communicateALLAgents(modelsList, m1.senderId, sendingObjectList)
         #print(modelsList[4].getbehaviourTruthTableNow())
 
         modelsList[0].evaluate_behaviour(3)
@@ -122,9 +71,9 @@ if __name__ == '__main__':
             m1.message = modelsList[j].get_behaviourstate()
             m1.senderId = modelsList[j].uniqueId
             m1.messageType = "behaviourOfAgentNow"
-            communicateALLAgents(modelsList,m1.senderId,sendingObjectList)
+            ag.communicateALLAgents(modelsList,m1.senderId,sendingObjectList)
         if i % 100 == 0:
-            saveDatas(modelsList, filePath)
+            ag.saveDatas(modelsList, filePath)
         #print("model1:",modelsList[0].get_behaviourstate())
         #print("model2:",modelsList[1].get_behaviourstate())
         #print("model3:", modelsList[2].get_behaviourstate())

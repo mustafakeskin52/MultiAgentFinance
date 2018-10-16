@@ -1,6 +1,8 @@
 import time
 import numpy as np
+import os.path
 import pandas as pd
+import pickle
 from Server import Server
 from LinearRegAgent import LinearRegAgent
 from EvaluatorAgent import EvaluatorAgent
@@ -52,15 +54,27 @@ def readDataFromCSV(path):
    spy = pd.read_csv(path)
    data = spy['Adj Close'].values.astype(float)
    return data
+def loadDatas(modelsList,fileName):
+    for i in range(len(modelsList)):
+        if os.path.exists(fileName+str(i)+".npz") == True:
+            modelsList[i].loadALLVariables(fileName+str(i)+".npz")
+    return modelsList
+def saveDatas(modelsList,fileName):
+    for i in range(len(modelsList)):
+        if os.path.exists(fileName + str(i) + ".npz") == True:
+            os.remove(fileName + str(i) + ".npz")
+    for t in range(len(modelsList)):
+        modelsList[t].saveALLVariables(fileName + str(t) + ".npz")
 if __name__ == '__main__':
     modelsList = []
+    filePath = "globalsave"
     ns = run_nameserver()
+    server = run_agent('Server', base=Server)
     model1 = run_agent('Model1', base=LinearRegAgent)
     model2 = run_agent('Model2', base=LinearRegAgent)
     model3 = run_agent('Model3',base=LinearRegAgent)
     evaluate_agent = run_agent('Evaluator',base=EvaluatorAgent)
     imitator = run_agent('Imitator',base=ImitatorAgent)
-    server = run_agent('Server', base=Server)
 
     model1.uniqueId = "model1"
     model2.uniqueId = "model2"
@@ -77,12 +91,13 @@ if __name__ == '__main__':
     initialConnectionsAgent(modelsList)
     # Send messages
     m1 = MessageType()
-
+    #modelsList = loadDatas(modelsList,filePath)
+    loadDatas(modelsList,filePath)
     agentlist = getAgentList(modelsList)#all agent names have been stored in this list
     data = readDataFromCSV("AMD.CSV")
-    for i in range(len(data)):
+    for i in range(1800,len(data),1):
         #In the loop for testing some probabilities
-        m1.message = [data[i],i]
+        m1.message = [data[i], i]
         server.server_broadcast(m1)
 
         modelsList[3].update()
@@ -95,7 +110,7 @@ if __name__ == '__main__':
         m1.messageType = "behaviourOfAgentNow"
 
         communicateALLAgents(modelsList, m1.senderId, sendingObjectList)
-        print(modelsList[4].getbehaviourTruthTableNow())
+        #print(modelsList[4].getbehaviourTruthTableNow())
 
         modelsList[0].evaluate_behaviour(3)
         modelsList[1].evaluate_behaviour(5)
@@ -108,9 +123,11 @@ if __name__ == '__main__':
             m1.senderId = modelsList[j].uniqueId
             m1.messageType = "behaviourOfAgentNow"
             communicateALLAgents(modelsList,m1.senderId,sendingObjectList)
-
-        print("model1:",modelsList[0].get_behaviourstate())
-        print("model2:",modelsList[1].get_behaviourstate())
-        print("model3:", modelsList[2].get_behaviourstate())
+        if i % 100 == 0:
+            saveDatas(modelsList, filePath)
+        #print("model1:",modelsList[0].get_behaviourstate())
+        #print("model2:",modelsList[1].get_behaviourstate())
+        #print("model3:", modelsList[2].get_behaviourstate())
         print(modelsList[3].getAgentScores())
+
     ns.shutdown()

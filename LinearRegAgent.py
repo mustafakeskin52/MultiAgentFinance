@@ -1,7 +1,7 @@
 from Model import Model
 import numpy as np
 from sklearn import linear_model
-
+import dill
 
 class BehaviourState:
     BUY = 1
@@ -22,11 +22,27 @@ class LinearRegAgent(Model):
         self.dataMemory.append(receivingObjectFromServer.message[0])
         self.dataTime.append(receivingObjectFromServer.message[1])
 
+    def saveAutoVariables(self, filename):
+        dill.dump_session(filename)
+
+    def loadAutoVariables(self, filename):
+        dill.load_session(filename)
+
+    def loadALLVariables(self, pathOfImitatorObject):
+        data = np.load(pathOfImitatorObject)
+        self.dataMemory = data['dataMemory'].tolist()
+        self.dataTime = data['dataTime'].tolist()
+
+    def saveALLVariables(self, pathOfImitatorObject):
+        np.savez(pathOfImitatorObject,dataMemory=self.dataMemory,
+                 dataTime=self.dataTime)
+    # The method provide to send to message from self to another agent
     def evaluate_behaviour(self,lastN):
         t = self.dataTime[-1]+1
         time = np.arange(t - lastN, t, 1)
         time = time.reshape(-1, 1)
-        if t > lastN:
+        if len(self.dataMemory) > lastN:
+            #print(t)
             regr = linear_model.LinearRegression()
             regr.fit(time,self.dataMemory[t - lastN:t])
             predictionValue = regr.predict(t)

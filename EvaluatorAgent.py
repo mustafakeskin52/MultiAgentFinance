@@ -1,13 +1,13 @@
 from Model import Model
 from MessageType import BehaviourState
 import numpy as np
-
+import time
+import dill
 #Evaluator agent  receives data from other agents that try to  predict the next value of data that has a financial problem or any classification problem
 class EvaluatorAgent(Model):
     agentPredictionList = {}
     diffRealBehaviourValue = []
     overallscoreAgents = {}
-    overallScoresTableAgents = {}
     periodicScoreTableAgents = {}
     periodOfData = 15
     #When evaluater receive a message from any agent it run receive_agent function
@@ -17,6 +17,25 @@ class EvaluatorAgent(Model):
         else:
             self.agentPredictionList[recevingObjectFromAgent.senderId] = [recevingObjectFromAgent.message]
         return None
+        # The method provide to send to message from self to another agent
+
+    def loadALLVariables(self, pathOfImitatorObject):
+        data = np.load(pathOfImitatorObject)
+        self.agentPredictionList = data['agentPredictionList'].tolist()
+        self.diffRealBehaviourValue = data['diffRealBehaviourValue'].tolist()
+        self.overallscoreAgents = data['overallscoreAgents'].tolist()
+        self.periodicScoreTableAgents = data['periodicScoreTableAgents'].tolist()
+        self.dataTime = data['dataTime'].tolist()
+        self.dataMemory = data['dataMemory'].tolist()
+
+
+    def saveALLVariables(self, pathOfImitatorObject):
+        np.savez(pathOfImitatorObject, agentPredictionList=self.agentPredictionList,
+                diffRealBehaviourValue=self.diffRealBehaviourValue,
+                overallscoreAgents=self.overallscoreAgents,
+                periodicScoreTableAgents=self.periodicScoreTableAgents,
+                dataMemory =self.dataMemory,
+                dataTime=self.dataTime)
     #This score show that all of agents succeed to predict next value of datas rightly.
     #This score is a rate over 1.00
     def updateScores(self):
@@ -39,8 +58,6 @@ class EvaluatorAgent(Model):
                 self.periodicScoreTableAgents[key] = agentUpdatePredictionList
     def getAgentScores(self):
         return self.overallscoreAgents
-    def overallScoresTableAgents(self):
-        return self.overallScoresTableAgents
     def getPeriodicScoreTableAgents(self):
         return self.periodicScoreTableAgents
     #to update flowing of evaluate agent

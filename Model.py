@@ -1,5 +1,6 @@
 from osbrain import Agent
 from MessageType import MessageType
+import numpy as np
 from osbrain import run_agent
 from osbrain import run_nameserver
 
@@ -11,7 +12,6 @@ class Model(Agent):
     dataMemory = []
     dataTime = []
     behaviourState = 0
-
     #PULL-PUSH relationship communication is actualized with this function
 
     def on_init_agent(self,server,connectionFunction):
@@ -25,7 +25,6 @@ class Model(Agent):
         self.connect(connectionAgent.addr('main'),handler = connectionFunction)
 
     #This method might be overrided when child class is writing
-
     def receive_agent_message(self,receivingObjectFromAgent):
         if receivingObjectFromAgent != None:
             self.log_info('ReceivedFromAgent: %s' % receivingObjectFromAgent.senderId)
@@ -37,8 +36,6 @@ class Model(Agent):
         self.log_info('ReceivedFromServer: %s' % receivingObjectFromServer.message[0])
         self.dataMemory.append(receivingObjectFromServer.message[0])
         self.dataTime.append(receivingObjectFromServer.message[1])
-
-    #The method provide to send to message from self to another agent
 
     def sending_message(self,sendingObject):
        if sendingObject != None:

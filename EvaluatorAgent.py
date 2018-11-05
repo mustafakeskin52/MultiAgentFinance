@@ -1,16 +1,19 @@
-from Model import Model
+from ModelAgent import Model
 from MessageType import BehaviourState
 import numpy as np
 import time
 import dill
 #Evaluator agent  receives data from other agents that try to  predict the next value of data that has a financial problem or any classification problem
 class EvaluatorAgent(Model):
+
+    agentLastPredictionList = []
     agentPredictionList = {}
     diffRealBehaviourValue = []
     overallscoreAgents = {}
     periodicScoreTableAgents = {}
-    periodOfData = 15
-    #When evaluater receive a message from any agent it run receive_agent function
+    periodOfData = 1
+
+    # When evaluater receive a message from any agent it run receive_agent function
     def receive_agent_message(self,recevingObjectFromAgent):
         if self.agentPredictionList.__contains__(recevingObjectFromAgent.senderId):
             self.agentPredictionList[recevingObjectFromAgent.senderId].append(recevingObjectFromAgent.message)
@@ -27,8 +30,11 @@ class EvaluatorAgent(Model):
         self.periodicScoreTableAgents = data['periodicScoreTableAgents'].tolist()
         self.dataTime = data['dataTime'].tolist()
         self.dataMemory = data['dataMemory'].tolist()
-
-
+    def getAgentLastPredictionList(self):
+        self.agentLastPredictionList = []
+        for key in self.agentPredictionList:
+            self.agentLastPredictionList.append(self.agentPredictionList[key][:])
+        return self.agentLastPredictionList
     def saveALLVariables(self, pathOfImitatorObject):
         np.savez(pathOfImitatorObject, agentPredictionList=self.agentPredictionList,
                 diffRealBehaviourValue=self.diffRealBehaviourValue,
@@ -46,16 +52,13 @@ class EvaluatorAgent(Model):
     #This score give a frame succeed rate.It is different from updateScores due to it calculate truth table of a period of data
     #And it return a table that filled with true or not
     def calcPeriodicScoresAgents(self):
-        if len(self.dataMemory) >= self.periodOfData:
-            for key in self.agentPredictionList:
-                tempPredictionList = np.asarray(self.agentPredictionList[key])
-                realList = np.asarray(self.diffRealBehaviourValue)
-                lengthPredictList = len(tempPredictionList)
-                lengthRealList = len(realList)
-                #print(tempPredictionList[lengthPredictList - self.periodOfData:lengthPredictList])
-                agentUpdatePredictionList = (tempPredictionList[lengthPredictList - self.periodOfData:lengthPredictList] *
-                       realList[lengthRealList - self.periodOfData:lengthRealList] >= 0)
-                self.periodicScoreTableAgents[key] = agentUpdatePredictionList
+        for key in self.agentPredictionList:
+            tempPredictionList = np.asarray(self.agentPredictionList[key])
+            realList = np.asarray(self.diffRealBehaviourValue)
+            agentsScoreList = int(tempPredictionList[len(tempPredictionList)-1] *realList[len(realList)-1] > 0)
+            self.periodicScoreTableAgents[key] = agentsScoreList
+    def getAgentPredictions(self):
+        return self.agentPredictionList
     def getAgentScores(self):
         return self.overallscoreAgents
     def getPeriodicScoreTableAgents(self):

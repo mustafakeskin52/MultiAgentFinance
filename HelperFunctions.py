@@ -13,7 +13,7 @@ from osbrain import run_nameserver
 from osbrain import Agent
 from sklearn import linear_model
 
-def initialConnectionsAgent(modelsList):
+def initialConnectionsAgent(modelsList,server):
     # if agent receive a message from server,code will flow to the connectionFunction.
     # Therefore the parameter must been given truthly to could run the code
 
@@ -43,10 +43,10 @@ def communicateALLAgents(modelsList,sendingAgent,sendingObjectLists):
             else:
                 modelsList[modelIndex].sending_message(None)
 
-def getAgentList(modelLists):
+def getAgentList(modelsLists):
     agentLists = []
-    for i in range(len(modelsList)):
-        agentLists.append(modelsList[i].uniqueId)
+    for i in range(len(modelsLists)):
+        agentLists.append(modelsLists[i].uniqueId)
     return agentLists
 
 def evaluateAgentsBehaviours():

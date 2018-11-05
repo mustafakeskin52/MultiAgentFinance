@@ -1,9 +1,7 @@
 import time
-import numpy as np
 import os.path
-import pandas as pd
 import pickle
-import Agent as ag
+import HelperFunctions as hp
 from Server import Server
 from LinearRegAgent import LinearRegAgent
 from EvaluatorAgent import EvaluatorAgent
@@ -37,28 +35,30 @@ if __name__ == '__main__':
     modelsList.append(evaluate_agent)
     modelsList.append(imitator)
 
-    ag.initialConnectionsAgent(modelsList)
+    hp.initialConnectionsAgent(modelsList,server)
     # Send messages
     m1 = MessageType()
     #modelsList = loadDatas(modelsList,filePath)
-    ag.loadDatas(modelsList,filePath)
-    agentlist = ag.getAgentList(modelsList)#all agent names have been stored in this list
-    data = ag.readDataFromCSV("AMD.CSV")
-    for i in range(1800,len(data),1):
+    hp.loadDatas(modelsList,filePath)
+    agentlist = hp.getAgentList(modelsList)#all agent names have been stored in this list
+    data = hp.readDataFromCSV("AMD.CSV")
+
+    for i in range(0,len(data),1):
         #In the loop for testing some probabilities
         m1.message = [data[i], i]
         server.server_broadcast(m1)
 
         modelsList[3].update()
+        print(i)
         print("realIncreasing", data[i] - data[i - 1])
 
         sendingObjectList = {"model1": None, "model2": None, "model3": None, "evaluater": None, "imitator": m1}
         m1.message = modelsList[3].getPeriodicScoreTableAgents()
         # print("list",m1.message)
         m1.senderId = "evaluater"
-        m1.messageType = "behaviourOfAgentNow"
+        m1.messageType = "behaviourTruthLast"
+        hp.communicateALLAgents(modelsList, m1.senderId, sendingObjectList)
 
-        ag.communicateALLAgents(modelsList, m1.senderId, sendingObjectList)
         #print(modelsList[4].getbehaviourTruthTableNow())
 
         modelsList[0].evaluate_behaviour(3)
@@ -71,12 +71,21 @@ if __name__ == '__main__':
             m1.message = modelsList[j].get_behaviourstate()
             m1.senderId = modelsList[j].uniqueId
             m1.messageType = "behaviourOfAgentNow"
-            ag.communicateALLAgents(modelsList,m1.senderId,sendingObjectList)
-        if i % 100 == 0:
-            ag.saveDatas(modelsList, filePath)
+            hp.communicateALLAgents(modelsList,m1.senderId,sendingObjectList)
+
+        sendingObjectList = {"model1": None, "model2": None, "model3": None, "evaluater": None, "imitator": m1}
+        m1.message = modelsList[3].getAgentLastPredictionList()
+        # print("list",m1.message)
+        m1.senderId = "evaluater"
+        m1.messageType = "behaviourOfAgentNow"
+
+        hp.communicateALLAgents(modelsList, m1.senderId, sendingObjectList)
+
         #print("model1:",modelsList[0].get_behaviourstate())
         #print("model2:",modelsList[1].get_behaviourstate())
         #print("model3:", modelsList[2].get_behaviourstate())
         print(modelsList[3].getAgentScores())
-
+        #print("PeriodicDatas",modelsList[3].getPeriodicScoreTableAgents())
+    hp.saveDatas(modelsList, filePath)
+    modelsList[4].saveDataFrameCSV()
     ns.shutdown()

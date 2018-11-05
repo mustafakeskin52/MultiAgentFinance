@@ -1,7 +1,6 @@
-from Model import Model
+from ModelAgent import Model
 import numpy as np
 from sklearn import linear_model
-import dill
 
 class BehaviourState:
     BUY = 1
@@ -22,12 +21,6 @@ class LinearRegAgent(Model):
         self.dataMemory.append(receivingObjectFromServer.message[0])
         self.dataTime.append(receivingObjectFromServer.message[1])
 
-    def saveAutoVariables(self, filename):
-        dill.dump_session(filename)
-
-    def loadAutoVariables(self, filename):
-        dill.load_session(filename)
-
     def loadALLVariables(self, pathOfImitatorObject):
         data = np.load(pathOfImitatorObject)
         self.dataMemory = data['dataMemory'].tolist()
@@ -41,7 +34,8 @@ class LinearRegAgent(Model):
         t = self.dataTime[-1]+1
         time = np.arange(t - lastN, t, 1)
         time = time.reshape(-1, 1)
-        if len(self.dataMemory) > lastN:
+
+        if len(self.dataMemory) >= lastN:
             #print(t)
             regr = linear_model.LinearRegression()
             regr.fit(time,self.dataMemory[t - lastN:t])

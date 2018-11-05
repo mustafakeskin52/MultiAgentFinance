@@ -1,79 +1,59 @@
-from Model import Model
+from ModelAgent import Model
 import numpy as np
+import pandas as pd
 import dill
 import time
 class ImitatorAgent(Model):
     overallScoreAgents = {}
-    behaviourTruthTableNow = {}
+    behaviourTruthTableLast = {}
     behaviourTruthTableAll = {}
-    lstmInputSetLastPeriod = []
-    lstmOutputSetY = []
-    lstmOutputSetX = []
-    lstmOutputSetNumpyX = []
-    lstmOutputSetNumpyY = []
-    periodOfData = 15
+    lstmOutputSetLastPeriod = []
+    lstmOutputSetOverall = []
+    lstmInputSetOverall = []
+
     def receive_agent_message(self,receivingObjectFromAgent):
         if receivingObjectFromAgent != None:
-            if receivingObjectFromAgent.messageType == "overAllScores":
-                self.overallScoreAgents = receivingObjectFromAgent.message
-            if receivingObjectFromAgent.messageType == "behaviourOfAgentNow":
-                self.behaviourTruthTableNow = receivingObjectFromAgent.message
-                self.updateBehaviourAllTable()
-        # The method provide to send to message from self to another agent
-
+            if receivingObjectFromAgent.message != {}:
+                if receivingObjectFromAgent.messageType == "overAllScores":
+                    self.overallScoreAgents = receivingObjectFromAgent.message
+                elif receivingObjectFromAgent.messageType == "behaviourTruthLast":
+                    self.behaviourTruthTableLast = receivingObjectFromAgent.message
+                    self.updateBehaviourAllTable()
+                elif receivingObjectFromAgent.messageType == "behaviourOfAgentNow":
+                    self.lstmInputSetOverall = receivingObjectFromAgent.message
+    # The method provide to send to message from self to another agent
     def loadALLVariables(self,pathOfImitatorObject):
         data = np.load(pathOfImitatorObject)
         self.overallScoreAgents = data['overallScoreAgents'].tolist()
-        self.behaviourTruthTableNow= data['behaviourTruthTableNow'].tolist()
+        self.behaviourTruthTableLast= data['behaviourTruthTableLast'].tolist()
         self.behaviourTruthTableAll= data['behaviourTruthTableAll'].tolist()
-        self.lstmInputSetLastPeriod= data['lstmInputSetLastPeriod']
-        self.lstmOutputSetY= data['lstmOutputSetY'].tolist()
-        self.lstmOutputSetX= data['lstmOutputSetX'].tolist()
-        self.lstmOutputSetNumpyX = data['lstmOutputSetNumpyX']
-        self.lstmOutputSetNumpyY = data['lstmOutputSetNumpyY']
+        self.lstmOutputSetLastPeriod= data['lstmOutputSetLastPeriod']
+        self.lstmInputSetOverall = data['lstmInputSetOverall']
+        self.lstmOutputSetOverall = data['lstmOutputSetOverall'].tolist()
         self.dataMemory = data['dataMemory'].tolist()
         self.dataTime = data['dataTime'].tolist()
-        return
     def saveALLVariables(self,pathOfImitatorObject):
         np.savez(pathOfImitatorObject,overallScoreAgents =self.overallScoreAgents,
-                behaviourTruthTableNow = self.behaviourTruthTableNow,
-                behaviourTruthTableAll = self.behaviourTruthTableAll,
-                lstmInputSetLastPeriod = self.lstmInputSetLastPeriod,
-                lstmOutputSetY = self.lstmOutputSetY,
-                lstmOutputSetX = self.lstmOutputSetX,
-                lstmOutputSetNumpyX = self.lstmOutputSetNumpyX,
-                lstmOutputSetNumpyY = self.lstmOutputSetNumpyY,
-                dataMemory = self.dataMemory,
-                dataTime = self.dataTime)
-    def saveTrainingVariables(self,pathOfXVariables,pathOfYVariables):
-        np.save(pathOfXVariables, self.lstmOutputSetNumpyX)
-        np.save(pathOfYVariables, self.lstmOutputSetNumpyY)
-    def loadTrainingVaribles(self,pathOfXVariables,pathOfYVariables):
-        self.lstmOutputSetNumpyX = np.load(pathOfXVariables)
-        self.lstmOutputSetNumpyY = np.load(pathOfYVariables)
+                  behaviourTruthTableLast = self.behaviourTruthTableLast,
+                 behaviourTruthTableAll = self.behaviourTruthTableAll,
+                 lstmOutputSetLastPeriod = self.lstmOutputSetLastPeriod,
+                 lstmOutputSetOverall = self.lstmOutputSetOverall,
+                 lstmInputSetOverall = self.lstmInputSetOverall,
+                 dataMemory = self.dataMemory,
+                 dataTime = self.dataTime)
+    def saveDataFrameCSV(self):
+        df = pd.DataFrame(self.lstmInputSetOverall)
+        df = df.iloc[:, :-1]
+        df1_transposed = df.T
+        df1_transposed.to_csv("xtrain.csv", sep=',', encoding='utf-8',index=False)
+
+        templstmOutputSetOverall = np.asarray(self.lstmOutputSetOverall).transpose()
+        df2 = pd.DataFrame(templstmOutputSetOverall)
+        df2_transposed = df2.T
+        df2_transposed.to_csv("ytrain.csv", sep=',', encoding='utf-8',index=False)
     def updateBehaviourAllTable(self):
-        print("lstmOutputLength",len(self.lstmOutputSetNumpyY))
-        for key in self.behaviourTruthTableNow:
-            if self.behaviourTruthTableAll.__contains__(key):
-                self.behaviourTruthTableAll[key].append(self.behaviourTruthTableNow[key])
-            else:
-                self.behaviourTruthTableAll[key] = [self.behaviourTruthTableNow[key]]
-        self.updateListOfTrain()
-        self.listToNumpyArray()
-    #update to data before all process is started
-    def updateListOfTrain(self):
-        if len(self.lstmInputSetLastPeriod) == self.periodOfData:
-            self.lstmOutputSetY.append(np.asarray(self.lstmInputSetLastPeriod[-1,:],dtype=int))
-            self.lstmOutputSetX.append(np.asarray(self.lstmInputSetLastPeriod[:-1,:],dtype=int))
-    #List variables is converted to numpy array variables for giving a lstm network
-    def listToNumpyArray(self):
-        self.lstmInputSetLastPeriod = list(self.behaviourTruthTableNow.values())
-        self.lstmInputSetLastPeriod = np.asarray(self.lstmInputSetLastPeriod ,dtype=int)
-        self.lstmInputSetLastPeriod = np.transpose(self.lstmInputSetLastPeriod)
-
-        self.lstmOutputSetNumpyY = np.asarray(self.lstmOutputSetY)
-        self.lstmOutputSetNumpyX = np.asarray(self.lstmOutputSetX)
-
+        self.lstmOutputSetLastPeriod = list(self.behaviourTruthTableLast.values())
+        self.lstmOutputSetOverall.append(self.lstmOutputSetLastPeriod)
     def receive_server_broadcast_message(self, receivingObjectFromServer):
         self.dataMemory.append(receivingObjectFromServer.message[0])
         self.dataTime.append(receivingObjectFromServer.message[1])

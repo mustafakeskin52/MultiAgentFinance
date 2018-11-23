@@ -53,8 +53,8 @@ if __name__ == '__main__':
     #modelsList = loadDatas(modelsList,filePath)
     hp.loadDatas(modelsList,filePath)
     agentlist = hp.getAgentList(modelsList)#all agent names have been stored in this list
-    #data = hp.sinData(1000,30)#np.add(hp.sinData(1000,30), hp.sinData(1000,50))
-    data = hp.readDataFromCSV("AMD.CSV")
+    #data =hp.sinData(1000,30)# np.add(hp.sinData(1000,30), hp.sinData(1000,50))#hp.sinData(1000,30)#np.add(hp.sinData(1000,30), hp.sinData(1000,50))
+    data = hp.readDataFromCSV("AMD.CSV")[7000:]
     for i,d in enumerate(data):
         #In the loop for testing some probabilities
         majorityDeciderFeedBack = []

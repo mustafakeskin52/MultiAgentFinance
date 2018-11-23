@@ -8,6 +8,7 @@ class EvaluatorAgent(Model):
 
     agentLastPredictionList = []
     agentPredictionList = {}
+    agentEvaluationStartData = 0
     diffRealBehaviourValue = []
     overallscoreAgents = {}
     periodicScoreTableAgents = {}

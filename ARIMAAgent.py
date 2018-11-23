@@ -13,6 +13,8 @@ class BehaviourState:
 class ARIMAAgent(Model):
 
     lastPrediction = 0
+    model = None
+    model_fit = None
     def receive_agent_message(self,receivingObjectFromAgent):
         if receivingObjectFromAgent != None:
             self.log_info('ReceivedFromAgent: %s' % receivingObjectFromAgent.senderId)
@@ -32,16 +34,20 @@ class ARIMAAgent(Model):
         np.savez(pathOfImitatorObject,dataMemory=self.dataMemory,
                  dataTime=self.dataTime)
     # The method provides to send to message from self to another agent
-    def evaluate_behaviour(self,lastN):
+    def evaluate_behaviour(self,trainLength):
         t = self.dataTime[-1]
 
-        if len(self.dataMemory) >= lastN:
-            model = ARIMA(self.dataMemory[0:t+1], order=(0, 1, 0))
-            model_fit = model.fit(disp=0)
-            output = model_fit.forecast()
+        if len(self.dataMemory)%1 == 0 and len(self.dataMemory) > trainLength:
+            print("bingo:",len(self.dataMemory))
+            self.model = ARIMA(self.dataMemory[0:t + 1], order=(0, 1, 0))
+            self.model_fit = self.model.fit(disp=0)
+        if len(self.dataMemory) > trainLength:
+            output = self.model_fit.forecast()
             predictionValue = output[0]
-            if (predictionValue - self.lastPrediction)> 0:
+            if (predictionValue - self.lastPrediction) > 0:
                 self.behaviourState = BehaviourState.BUY
             else:
                 self.behaviourState = BehaviourState.SELL
             self.lastPrediction = predictionValue
+        else:
+            self.lastPrediction = BehaviourState.NONE

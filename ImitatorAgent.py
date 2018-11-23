@@ -45,12 +45,12 @@ class ImitatorAgent(Model):
         df = pd.DataFrame(self.lstmInputSetOverall)
         df = df.iloc[:, :-1]
         df1_transposed = df.T
-        df1_transposed.to_csv("xtrain.csv", sep=',', encoding='utf-8',index=False)
-
+        df1_transposed.to_csv("xtrainSin.csv", sep=',', encoding='utf-8',index=False)
+        print(self.lstmInputSetOverall)
         templstmOutputSetOverall = np.asarray(self.lstmOutputSetOverall).transpose()
         df2 = pd.DataFrame(templstmOutputSetOverall)
         df2_transposed = df2.T
-        df2_transposed.to_csv("ytrain.csv", sep=',', encoding='utf-8',index=False)
+        df2_transposed.to_csv("ytrainSin.csv", sep=',', encoding='utf-8',index=False)
     def updateBehaviourAllTable(self):
         self.lstmOutputSetLastPeriod = list(self.behaviourTruthTableLast.values())
         self.lstmOutputSetOverall.append(self.lstmOutputSetLastPeriod)

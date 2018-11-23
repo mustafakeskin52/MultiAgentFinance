@@ -11,8 +11,8 @@ class EvaluatorAgent(Model):
     diffRealBehaviourValue = []
     overallscoreAgents = {}
     periodicScoreTableAgents = {}
-    periodOfData = 1
-
+    periodOfData = 100
+    scoreOfTheLastBehaviours = {}
     # When evaluater receive a message from any agent it run receive_agent function
     def receive_agent_message(self,recevingObjectFromAgent):
         if self.agentPredictionList.__contains__(recevingObjectFromAgent.senderId):
@@ -49,21 +49,34 @@ class EvaluatorAgent(Model):
             tempPredictionList = np.asarray(self.agentPredictionList[key])
             realList = np.asarray(self.diffRealBehaviourValue)
             self.overallscoreAgents[key] = np.sum(tempPredictionList * realList >= 0) / len(realList)
+        # This score give a frame succeed rate.It is different from updateScores due to it calculate truth table of a period of data
+        # And it return a table that filled with true or not
+
+    def calcLastBehavioursAgents(self):
+        for key in self.agentPredictionList:
+            tempPredictionList = np.asarray(self.agentPredictionList[key])
+            realList = np.asarray(self.diffRealBehaviourValue)
+            unique, counts = np.unique(realList, return_counts=True)
+            print("realList:",dict(zip(unique, counts)))
+            agentsScoreList = int(tempPredictionList[len(tempPredictionList) - 1] * realList[len(realList) - 1] > 0)
+            self.scoreOfTheLastBehaviours[key] = agentsScoreList
     #This score give a frame succeed rate.It is different from updateScores due to it calculate truth table of a period of data
     #And it return a table that filled with true or not
     def calcPeriodicScoresAgents(self):
         for key in self.agentPredictionList:
             tempPredictionList = np.asarray(self.agentPredictionList[key])
             realList = np.asarray(self.diffRealBehaviourValue)
-            agentsScoreList = int(tempPredictionList[len(tempPredictionList)-1] *realList[len(realList)-1] > 0)
-            self.periodicScoreTableAgents[key] = agentsScoreList
+            tempScores = np.sum(tempPredictionList[-self.periodOfData:] * realList[-self.periodOfData:] >= 0)/len(realList[-self.periodOfData:])
+            self.periodicScoreTableAgents[key] = tempScores
     def getAgentPredictions(self):
         return self.agentPredictionList
     def getAgentScores(self):
         return self.overallscoreAgents
+    def getLastBehavioursAgents(self):
+        return self.scoreOfTheLastBehaviours
     def getPeriodicScoreTableAgents(self):
         return self.periodicScoreTableAgents
-    #to update flowing of evaluate agent
+    #to update flowing of evaluater agent
     #In addition,this update code is including also the piece of code to calculate real behaviour of data
     #After real behaviours of data are calculated,at difference between real value and prediction  is calculated
     def update(self):
@@ -76,6 +89,7 @@ class EvaluatorAgent(Model):
                 self.diffRealBehaviourValue.append(BehaviourState.SELL)
         self.calcPeriodicScoresAgents()
         self.updateScores()
+        self.calcLastBehavioursAgents()
         #print("overallScores:",self.overallscoreAgents)
         #print("lastPeriodScores:",self.periodicScoreTableAgents)
     #this method recive broadcasting data from server after every broadcast is actualized

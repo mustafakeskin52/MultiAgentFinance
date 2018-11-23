@@ -51,6 +51,14 @@ def getAgentList(modelsLists):
 
 def evaluateAgentsBehaviours():
     return None
+def sinData(fs,f):
+    x = np.arange(fs)  # the points on the x axis for plotting
+    # compute the value (amplitude) of the sin wave at the for each sample
+    return [np.sin(2 * np.pi * f * (i / fs)) for i in x]
+def cosData(fs,f):
+    x = np.arange(fs)  # the points on the x axis for plotting
+    # compute the value (amplitude) of the sin wave at the for each sample
+    return [np.cos(2 * np.pi * f * (i / fs)) for i in x]
 def readDataFromCSV(path):
    spy = pd.read_csv(path)
    data = spy['Adj Close'].values.astype(float)

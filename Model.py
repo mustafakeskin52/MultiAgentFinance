@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch.nn.functional as F
 from functools import partial
+from scipy.spatial import distance
 from torch import optim
 from tensorboardX import SummaryWriter
 
@@ -211,11 +212,9 @@ class GenericModel(nn.Module):
                 self.optimizer.step()
                 self.training_loss = self.current_loss
 
-
-
             # detach first hiddens of previous iteration
-            if isinstance(self, LSTM):
-                self.detach()
+            # if isinstance(self, LSTM):
+            #     self.detach()
 
     def validate(self, X, y):
         with torch.no_grad():
@@ -229,15 +228,59 @@ class GenericModel(nn.Module):
             _, predicted = torch.max(outputs.data, 1)
             return predicted
 
-
-
     def score(self, X, y):
         # score(X, y[, sample_weight])	Returns the mean accuracy on the given test data and labels.
-
         predicted = self.predict(X)
         correct = (predicted == y).sum().item()
-        return correct/y.size()[0]
+        return correct/(y.size()[0])
 
+    def statisticalDatas(self,X,y,agentNumbers,labelDatas,inputDatas):
+        """""
+            Size of the labeldatas is equal to binary coding of the agents x maximum possibilities of hammming distance + total counts of the 
+            binary coding of the agents 
+        """""
+        predicted = self.predict(X)
+        tempX = np.asarray(predicted)
+        tempY = np.asarray(y)
+
+        convergedX = self.inputToState(np.asarray(X),[],agentNumbers)
+
+        hammingDistanceMatrix = self.hamming(tempX, tempY)
+        #To increase the counts of the matrix elements that keep the statistical values of agent truth values
+        for i in range(len(tempX)):
+            labelDatas[tempY[i]][int(hammingDistanceMatrix[i])] += 1
+
+            temp = False
+            for k in range(inputDatas.shape[0]):
+                print(np.any(inputDatas[:],convergedX[k]))
+
+
+        labelDatas[:,-1] = np.sum(labelDatas[:,0:-1],axis = 1)
+        return labelDatas
+    def inputToState(self,X,states,agentNumbers):
+        """""
+        states vector includes all possible states for agents.
+        For instance:
+        As long as [-1,1] is given a parameter by a state variable,the mapping will be [001,010] and size of X vector might be 
+            AgentsCount x size of mapping
+        If the givening parameter that is the state parameter is changed by [-1,0,1],the mapping will be [001,010,100] but size of X vector
+        might not be change.
+        """""
+        convergedX = np.zeros((X.shape[0],agentNumbers))
+        for i in range(X.shape[0]):
+            for j in range(0,X.shape[2],3):
+                if np.array_equal(X[i,-1,j:j+3],[0,0,1]):
+                    convergedX[i,int(j/3)] = -1
+                elif np.array_equal(X[i,-1,j:j+3],[0,1,0]):
+                    convergedX[i,int(j/3)] = 1
+        return convergedX
+
+    def hamming(self,a,b):
+        np.set_printoptions(threshold=np.nan)
+        result = []
+        for i in range(len(a)):
+            result.append(distance.hamming(a[i],b[i]))
+        return np.round(np.asarray(result)*len(np.binary_repr(np.max(np.asarray(a)))))
 
     def predict_log_proba(self, X):
         # predict_log_proba(X)	Return the log of probability estimates.
@@ -254,18 +297,12 @@ class GenericModel(nn.Module):
         # get_params([deep])	Get parameters for this estimator.
         pass
 
-
-
-
-
-
 class CNN(GenericModel):
     def __init__(self, config):
 
         # todo: add params to CNN
         GenericModel.__init__(self)
         self.device = config.DEVICE
-
 
         self.conv1 = nn.Conv2d(in_channels=config.INPUT_SIZE, out_channels=10,
                                kernel_size=5, stride=1,
@@ -330,13 +367,13 @@ class LSTM(GenericModel):
                             dropout=0,  # 0 means no probability
                             bidirectional=False)
 
-        self.fc = nn.Sequential(nn.Linear(in_features=self.hidden_size, out_features=100),
+        self.fc = nn.Sequential(nn.Linear(in_features=self.hidden_size, out_features=10),
                                 # nn.BatchNorm1d(num_features=100),  # todo: test batchnorm
                                 nn.ReLU(),  # todo: test ReLU vs SELU
-                                nn.Linear(in_features=100, out_features=100),
+                                nn.Linear(in_features=10, out_features=10),
                                 # nn.BatchNorm1d(num_features=100),
                                 nn.ReLU(),
-                                nn.Linear(in_features=100, out_features=10),
+                                nn.Linear(in_features=10, out_features=10),
                                 # nn.BatchNorm1d(num_features=10),
                                 nn.ReLU(),
                                 nn.Linear(in_features=10, out_features=self.out_size))
@@ -387,7 +424,8 @@ class LSTM(GenericModel):
         batch_size = x.shape[0]
         self.hidden = self.init_hidden(batch_size=batch_size)
 
-        x = x.view(self.seq_length, -1, self.input_size)
+        # x = x.view(self.seq_length, -1, self.input_size)
+        x = torch.transpose(x,0,1)
         lstm_out, self.hidden = self.lstm(x, self.hidden)
 
         # return last sequence
@@ -437,3 +475,4 @@ class MLP(GenericModel):
 
 if __name__ == "__main__":
     pass
+

@@ -9,12 +9,12 @@ import torch
 from torchvision import transforms
 import pandas as pd
 import numpy as np
-from talib import RSI, SMA, MACD, WILLR, ULTOSC, MFI, STOCH
 
-import plots
-import utils
+
 import os
 import warnings
+import time
+from sys import getsizeof
 from sklearn import preprocessing
 from collections import defaultdict
 from scipy import spatial
@@ -28,9 +28,37 @@ from sklearn.preprocessing import OneHotEncoder
 from functools import partial
 from itertools import cycle
 
+def to_categorical(y, num_classes=None, dtype='float32'):
+    """Converts a class vector (integers) to binary class matrix.
+
+    E.g. for use with categorical_crossentropy.
+
+    # Arguments
+        y: class vector to be converted into a matrix
+            (integers from 0 to num_classes).
+        num_classes: total number of classes.
+        dtype: The data type expected by the input, as a string
+            (`float32`, `float64`, `int32`...)
+
+    # Returns
+        A binary matrix representation of the input. The classes axis
+        is placed last.
+    """
+    y = np.array(y, dtype='int')
+    input_shape = y.shape
+    if input_shape and input_shape[-1] == 1 and len(input_shape) > 1:
+        input_shape = tuple(input_shape[:-1])
+    y = y.ravel()
+    if not num_classes:
+        num_classes = np.max(y) + 1
+    n = y.shape[0]
+    categorical = np.zeros((n, num_classes), dtype=dtype)
+    categorical[np.arange(n), y] = 1
+    output_shape = input_shape + (num_classes,)
+    categorical = np.reshape(categorical, output_shape)
+    return categorical
+
 class GenericDataset():
-
-
 
     def random_train_sample(self, n):
         return GenericDataset._random_sample(self.train_dataset, n)
@@ -41,10 +69,9 @@ class GenericDataset():
     @staticmethod
     def _random_sample(dataset, n):
         perm = np.random.randint(0, dataset.__len__(), size=n)
-        data = dataset.data.numpy()[perm]
+        data = dataset.data.numpy()[:,perm,:]
         labels = dataset.labels.numpy()[perm]
-
-        return torch.Tensor(data).unsqueeze(dim=1), torch.Tensor(labels).long()
+        return torch.transpose(torch.Tensor(data),0,1), torch.Tensor(labels).long()
 
 """
 1. Sequence Learning Problem
@@ -53,8 +80,6 @@ class GenericDataset():
 4. Echo Random Subsequences
 5. Sequence Classification
 """
-
-
 class SequenceLearningOneToOne(GenericDataset):
 
     def __init__(self):
@@ -74,29 +99,127 @@ class SequenceLearningOneToOne(GenericDataset):
             # norm_dataset = (dataset - dataset.min())/(dataset.max() - dataset.min())
             # self.dataset = norm_dataset
 
-
             self.data = torch.FloatTensor(X).unsqueeze(dim=1)
             self.labels = torch.LongTensor(y)
-
-
 
         def __len__(self):
             return self.data.__len__()
 
         def __getitem__(self, ix):
             return self.data[ix, :], self.labels[ix]
+class FinancialDataSet(GenericDataset):
+    def __init__(self,seq_len=10):
+        train_valid_ration = 0.99
 
+        raw_dataset_x = pd.read_csv("xtrain1.1.csv")
+        raw_dataset_y = pd.read_csv("ytrain1.1.csv")
+        train_len = int(raw_dataset_x.shape[0] * train_valid_ration)
 
+        self.raw_dataset_x_training = raw_dataset_x.iloc[10:train_len, :-1].values
+        self.raw_dataset_x_validation = raw_dataset_x.iloc[train_len:, :-1].values
+        self.raw_dataset_y_training = raw_dataset_y.iloc[10:train_len, :-1].values
+        self.raw_dataset_y_validation = raw_dataset_y.iloc[train_len:, :-1].values
 
+        self.train_dataset = self.Inner(self.raw_dataset_x_training,self.raw_dataset_y_training,seq_len)
+        self.valid_dataset = self.Inner(self.raw_dataset_x_validation,self.raw_dataset_y_validation,seq_len)
 
+        #To calculate P(A1 = 1/A0 = 1) and extended as a generic version rather than just one conditional probability
+        # for i in range(3):
+        #     for j in range(3):
+        #         for k in range(-1,2,2):
+        #             for l in range(-1,2,2):
+        #                 indices = np.where(self.raw_dataset_x_training[:,i] == k)[0]
+        #                 conditionalTotalCount = len(indices)
+        #                 givenTotalCount = len(np.where(self.raw_dataset_x_training[indices,j] == l)[0])
+        #                 print("P(A{:d}={:d}/A{:d}={:d})={:f}".format(j,l,i,k,givenTotalCount/conditionalTotalCount))
+
+    class Inner(torch.utils.data.Dataset, GenericDataset):
+        def __init__(self,datasetX,datasetY,seq_len):
+            X = []
+            y = []
+            for i in range(datasetX.shape[0]-seq_len):
+                X.append(datasetX[i:i+seq_len])
+                y.append(datasetY[i+seq_len])
+            X = np.asarray(X)
+            y = np.asarray(y)
+            #seq_len, dataset_len,input_size
+            X = to_categorical(X,3)
+            X = X.reshape(X.shape[0], X.shape[1], X.shape[2] * X.shape[3])
+            X = X.transpose([1, 0, 2])
+
+            y = self.binary_to_decimal(y)
+
+           # print(np.array(X).shape)
+            y = y.T
+            self.data = torch.FloatTensor(X)
+            self.labels = torch.LongTensor(y)
+        def binary_to_decimal(self,y):
+            result = []
+            for i in range(y.shape[0]):
+                sum = 0
+                mul = 1
+                for j in range(y.shape[1]):
+                    sum = sum+mul*y[i,y.shape[1]-j-1]
+                    mul = mul*2
+                result.append(sum)
+            return np.asarray(result)
+        def __len__(self):
+            return self.data.shape[1]
+
+        def __getitem__(self, ix):
+            return self.data[:, ix, :], self.labels[ix]
+class SequenceBookWriting(GenericDataset):
+    def __init__(self,seq_len = 5,train_length = 1000):
+        #with open('Republic.txt', 'r') as content_file:
+         #    content = content_file.read()
+        #np.save("Republic.npy",content)
+        content = np.load("Republic.npy").tolist()
+        self.sequentialClass = np.array(list(set(content)))
+        sequence = np.zeros(len(content))
+        for j in range(len(self.sequentialClass)):
+            indexes = [pos for pos, char in enumerate(content) if char == self.sequentialClass[j]]
+            sequence[indexes] = j
+        seq7 = list()
+        i = 0
+        while(True):
+            seq7.append(sequence[i:i+seq_len])
+            if i+seq_len == len(sequence):
+                break
+            i = i + 1
+        dataset = np.array(seq7)
+        seq_len_max = len(self.sequentialClass)
+
+        self.train_dataset = self.Inner(dataset=dataset[0:100000,:],seq_len_max = seq_len_max,train_length = train_length)
+        self.valid_dataset = self.Inner(dataset=dataset[0:100000,:],seq_len_max = seq_len_max,train_length = train_length)
+
+    class Inner(torch.utils.data.Dataset, GenericDataset):
+        def __init__(self,dataset,seq_len_max,train_length):
+            X = dataset[0:train_length-1, :]
+            y = (dataset[1:train_length,-1])
+
+            # seq_len, dataset_len, input_size
+            X = to_categorical(X,seq_len_max).transpose([1, 0, 2])
+
+            y = y.T
+            self.data = torch.FloatTensor(X)
+            self.labels = torch.LongTensor(y)
+
+        def __len__(self):
+            return self.data.shape[1]
+
+        def __getitem__(self, ix):
+            return self.data[:, ix, :], self.labels[ix]
+
+        # data_size, seq_len, input_size
+      #  self.train_dataset = self.Inner(dataset=dataset, seq_len=seq_len, seq_limit=seq_limit)
+      #  self.valid_dataset = self.Inner(dataset=dataset, seq_len=seq_len, seq_limit=seq_limit)
 class SequenceLearningManyToOne(GenericDataset):
-    def __init__(self, seq_len=3, dataset_len=100, onehot=False):
+    def __init__(self, seq_len=3, seq_limit=11, dataset_len=100, onehot=False):
         # todo : add seq_range
-        sequence = cycle(np.arange(0, 11, 1))
+        sequence = cycle(np.arange(0, seq_limit, 1))
         seq7s = list()
         while(True):
             seq7 = list()
-            rnd = np.random.randint(0, seq_len)
 
             for i in range(seq_len):
                 digit = next(sequence)
@@ -109,50 +232,35 @@ class SequenceLearningManyToOne(GenericDataset):
         dataset = np.array(seq7s)
         np.random.shuffle(dataset)
 
-
         # data_size, seq_len, input_size
+        self.train_dataset = self.Inner(dataset=dataset,seq_len=seq_len, seq_limit=seq_limit)
+        self.valid_dataset = self.Inner(dataset=dataset,seq_len=seq_len, seq_limit=seq_limit)
 
-
-
-        self.train_dataset = self.Inner(dataset=dataset,seq_len=seq_len)
-        self.valid_dataset = self.Inner(dataset=dataset,seq_len=seq_len)
 
     class Inner(torch.utils.data.Dataset, GenericDataset):
-        def __init__(self, dataset, seq_len):
+        def __init__(self, dataset, seq_len,seq_limit):
             # self.encode = OneHotEncoder(sparse=False)
             # X = self.encode.fit_transform(X)
             # self.y = self.encode.transform(self.y)
 
             # norm_dataset = (dataset - dataset.min())/(dataset.max() - dataset.min())
             # self.dataset = norm_dataset
-            self.encode = OneHotEncoder(sparse=False)
-            self.encode.fit(dataset)
+
             X = dataset[:, :].astype(np.float32)
-            y = (dataset[:, -1] + 1).__mod__(11).astype(np.float32)
+            y = (dataset[:, -1] + 1).__mod__(seq_limit).astype(np.float32)
 
-            X = self.encode.transform(X).reshape(dataset.shape[0], seq_len, 11)
+            # seq_len, dataset_len, input_size
+            X = to_categorical(X, seq_limit).transpose([1,0,2])
 
-
-            self.data = torch.FloatTensor(X).unsqueeze(dim=1)
+            y = y.T
+            self.data = torch.FloatTensor(X)
             self.labels = torch.LongTensor(y)
 
-
-
-
-
         def __len__(self):
-            return self.data.__len__()
+            return self.data.shape[1]
 
         def __getitem__(self, ix):
-            return self.data[ix, :, :, :], self.labels[ix]
-
-
-
-
-
-
-
-
+            return self.data[:, ix, :], self.labels[ix]
 
 class ValueMemorizationOneToOne:
     def __init__(self):
@@ -184,7 +292,6 @@ class EchoRandomInteger:
         return sequence, sequence[sequence.__len__()-self.lag-1]
     def __len__(self):
         return 100
-
 class EchoRandomSubsequences:
     def __init__(self, lag=0):
         self.lag = lag
@@ -196,7 +303,7 @@ class EchoRandomSubsequences:
     def __len__(self):
         return 100
 
-class MNISTDataset():
+class MNISTDataset(GenericDataset):
     def __init__(self, config):
 
         self.train_dataset = datasets.MNIST('../dataset', train=True, download=True,
@@ -223,6 +330,7 @@ class MNISTDataset():
 
 class IndicatorDataset():
     """
+
     """
 
     def __init__(self, dataset_name, input_path, save_dataset, train_valid_ratio, seq_len, label_type='classification'):
@@ -543,9 +651,12 @@ class IndicatorDataset():
 
     def _read_dir(self, stocks_dir, stock_names):
         """
+
         Args:
             stocks_dir:
+
         Returns: (dict of pd.DataFrame) stock dictionary
+
         """
         stocks = dict()
         for fullfilename in os.listdir(stocks_dir):
@@ -608,7 +719,9 @@ class IndicatorDataset():
         Wrapper for indicator calculation
         Args:
             stocks:
+
         Returns:
+
         """
 
         return stocks.groupby('name').apply(IndicatorDataset.indicators)
@@ -616,9 +729,12 @@ class IndicatorDataset():
     @staticmethod
     def indicators(dataframe: pd.DataFrame) -> pd.DataFrame:
         """
+
         Args:
             dataframe(pd.DataFrame): should have 'high', 'low', 'adjusted_close', 'volume'
+
         Returns: (pd.DataFrame) calculated indicators
+
         """
 
         high = dataframe['high'].values
@@ -652,6 +768,7 @@ class IndicatorDataset():
 
     class InnerIndicatorDataset(torch.utils.data.Dataset):
         """
+
         Args:
             dataset(pd.DataFrame):
         """
@@ -848,19 +965,25 @@ class LoadDataset():
 
     def normalize(self, arr):
         """
+
         Args:
             arr:
+
         Returns:
+
         """
         return (arr - arr.min(axis=0)) / (arr.max(axis=0) - arr.min(axis=0)), arr.min(axis=0), arr.max(axis=0)
 
     def inverse_normalize(self, arr, min_term=None, max_term=None, only_first=False):
         """
+
         Args:
             arr:
             min_term:
             max_term:
+
         Returns:
+
         """
 
         if min_term is None:
@@ -875,6 +998,7 @@ class LoadDataset():
 
     class InnerLoadDataset(torch.utils.data.Dataset):
         """
+
             Args:
                 seq_length:
             Attributes:
@@ -915,17 +1039,22 @@ class LoadDataset():
 
         def __len__(self):
             """
+
             Returns:
                 int: data count
+
             """
             return self.X.shape[0] - self.seq_length * 2
 
         def __getitem__(self, ix):
             """
+
             Args:
                 ix:
+
             Returns:
                 (np.ndarray, np.ndarray):
+
             """
             # (row, seq_len, input_size)
             # return self.X[ix, :, :], self.y[ix, :]

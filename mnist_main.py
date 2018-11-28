@@ -25,9 +25,6 @@ import dataset
 # todo: add pr_cruve
 # todo: add confusion_matrix
 # todo: add weight_distribution
-
-
-
 class Experiment:
 
     def __init__(self, config, model ,dataset):
@@ -37,8 +34,6 @@ class Experiment:
 
         self.load()
         # self.save()
-
-
 
     def load(self):
 
@@ -52,7 +47,6 @@ class Experiment:
                                       batch_size=self.config.VALID_BATCH_SIZE,
                                       shuffle=self.config.VALID_SHUFFLE,
                                       drop_last=True)
-
         #MODEL = class_by_name(self.config.MODEL_NAME)  # CNN, LSTM
         #self.model = MODEL(config=self.config).to(self.config.DEVICE)
 
@@ -65,37 +59,45 @@ class Experiment:
 
     def run_epoch(self, epoch):
 
+        self.model.init_hidden()
         for step, (X, y) in enumerate(self.train_dataloader):
             # Fit the model
             self.model.fit(X, y)
             training_loss = self.model.training_loss
-
+        #TODO:The code block is implemented for testing.After all mission is completed,the parameters should be generalized
         score = 0.
+        #possibleStates = 2
+        #agentNumbers = 3
+        states = [-1,1]
+        #TODO:Inputdatas is a array keeping statistical information such as counts or histogram and it will be implemented inside statisticalDatas method
+        #inputdatas = np.zeros((possibleStates ^ agentNumbers, agentNumbers + 2))
+        #labelDatas = np.zeros((np.power(2, agentNumbers), agentNumbers + 2))
+        self.model.init_hidden()
         for step, (X, y) in enumerate(self.valid_dataloader):
 
             # Validate validation set
-            self.model.validate(X, y) # todo: current build call .validate when .score is used!
-
+            self.model.validate(X, y)  # todo: current build call .validate when .score is used!
+            #labelDatas = labelDatas + self.model.statisticalDatas(X,y,agentNumbers,labelDatas,inputdatas) # The method is called due to show distrubition of the input or output
             # Score
             score += self.model.score(X, y)
             validation_loss = self.model.validation_loss
 
+        #print("labelDatas", labelDatas)
         score = score/self.valid_dataloader.__len__()
         # Predict
-        X_sample, y_sample = self.dataset.random_train_sample(n=100)
+        X_sample, y_sample = self.dataset.random_train_sample(n=2)
         predicted_labels = self.model.predict(X_sample).cpu().detach()
         # predicted_labels = prediction_logprob
-
-
 
         # Log
         print("========================================")
         print("Training Loss: {}".format(training_loss))
         print("Validation Loss: {}".format(validation_loss))
         print("Score: {}".format(score))
-
-        print('Actual label:', y_sample[:5])
-        print('Predicted label:', predicted_labels[:5])
+        #print("X_sampleshape",X_sample.shape)
+        # print('Actual label:', self.dataset.sequentialClass[y_sample])
+        # print('Sample label:',self.dataset.sequentialClass[torch.argmax(X_sample, 2)])
+        # print('Predicted label:', self.dataset.sequentialClass[predicted_labels])
         print("========================================")
 
         # Write losses to the tensorboard
@@ -136,10 +138,6 @@ class Experiment:
 
         self.writer.export_scalars_to_json(self.config.EXPERIMENT_DIR+'.json')
 
-
-
-
-
 if __name__ == "__main__":
 
     """
@@ -149,21 +147,23 @@ if __name__ == "__main__":
     4. Pass config to experiment
     5. Run
     """
-    config = config.ConfigLSTM()
-    # config.save()
+    # config = config.ConfigCNN()
+    #
     # dataset = dataset.MNISTDataset(config)
 
+    config = config.ConfigLSTM()
     # dataset = dataset.SequenceLearningOneToOne()
     # model = model.LSTM(input_size=10, seq_length=1, num_layers=1,
     #                    out_size=10, hidden_size=10, batch_size=1, device=config.DEVICE)
-
-
-    dataset = dataset.SequenceLearningManyToOne(seq_len=5, onehot=True)
-    model = model.LSTM(input_size=11, seq_length=5, num_layers=1,
-                       out_size=11, hidden_size=10, batch_size=config.TRAIN_BATCH_SIZE,
-                       device=config.DEVICE)
-
-    # model = model.CNN(config)
+    config.save()
+    dataset = dataset.FinancialDataSet(seq_len=config.SEQ_LEN)
+    model = model.LSTM(input_size=config.INPUT_SIZE, seq_length=config.SEQ_LEN, num_layers=2,
+                          out_size=config.OUTPUT_SIZE, hidden_size=5, batch_size=config.TRAIN_BATCH_SIZE,
+                          device=config.DEVICE)
+    #
+    # # model = model.CNN(config)
+    #
 
     experiment = Experiment(config=config, model=model, dataset=dataset)
     experiment.run()
+

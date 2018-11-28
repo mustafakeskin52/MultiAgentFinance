@@ -6,7 +6,8 @@ class GenericConfig:
     def __init__(self):
         self.EXPERIMENT_DIR = None
         # Device params
-        self.USE_CUDA = torch.cuda.is_available()
+        # self.USE_CUDA = torch.cuda.is_available()
+        self.USE_CUDA = False
         if self.USE_CUDA:
             if torch.cuda.get_device_name(0) == 'GeForce GT 650M':
                 self.USE_CUDA = False
@@ -42,16 +43,21 @@ class ConfigLSTM(GenericConfig):
     def __init__(self):
         GenericConfig.__init__(self)
 
-        self.DATASET_NAME = 'ToyDataset'
+        self.DATASET_NAME = 'ToyDatalet'
         # Experiment params
         self.EPOCH_SIZE = 1000
         self.EXPERIMENT_DIR = '../experiment/{}/{}'.format(self.DATASET_NAME, str(int(time.time())))
 
         # Dataloader params
-        self.TRAIN_SHUFFLE = True
+        self.TRAIN_SHUFFLE = False
         self.VALID_SHUFFLE = False
-        self.TRAIN_BATCH_SIZE = 2
-        self.VALID_BATCH_SIZE = 2
+        self.TRAIN_BATCH_SIZE = 100
+        self.VALID_BATCH_SIZE = 5
+
+        # Model params
+        self.INPUT_SIZE = 12
+        self.OUTPUT_SIZE = 16
+        self.SEQ_LEN = 10
 
 class ConfigCNN(GenericConfig):
     """
@@ -73,8 +79,8 @@ class ConfigCNN(GenericConfig):
         # Dataloader params
         self.TRAIN_SHUFFLE = True
         self.VALID_SHUFFLE = False
-        self.TRAIN_BATCH_SIZE = 200
-        self.VALID_BATCH_SIZE = 200
+        self.TRAIN_BATCH_SIZE = 10
+        self.VALID_BATCH_SIZE = 10
 
         # Dataset params
         self.TRAIN_VALID_RATIO = 0.90
@@ -83,4 +89,3 @@ class ConfigCNN(GenericConfig):
         # Experiment params
         self.EPOCH_SIZE = 100
         self.EXPERIMENT_DIR = '../experiment/{}/{}'.format(self.DATASET_NAME ,str(int(time.time())))
-

@@ -42,7 +42,25 @@ def communicateALLAgents(modelsList,sendingAgent,sendingObjectLists):
                 modelsList[modelIndex].sending_message(sendingObjectLists[key])
             else:
                 modelsList[modelIndex].sending_message(None)
-
+def findOptimalThresholds(data,classNumber):
+    thresholdValues = np.zeros(classNumber-1)
+    N = len(data)
+    iterationRate = 0.05
+    for i in np.arange(-100,100,iterationRate):
+        print(np.sum(data > i)/N*100)
+        temp =  np.sum(data > i) / N * 100
+        #It is a empty state using for jumping unnecessary state.
+        if temp < 20:
+            temp = 0
+        elif temp < 40:
+            thresholdValues[0] = i
+        elif temp < 60:
+            thresholdValues[1] = i
+        elif temp < 80:
+            thresholdValues[2] = i
+        elif temp < 100:
+            thresholdValues[3] = i
+    return thresholdValues
 def getAgentList(modelsLists):
     agentLists = []
     for i in range(len(modelsLists)):

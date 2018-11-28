@@ -5,9 +5,11 @@ from statsmodels.tsa.arima_model import ARIMA
 from sklearn.metrics import mean_squared_error
 
 class BehaviourState:
+    HIGH_BUY = 2
     BUY = 1
-    SELL = -1
     NONE = 0
+    SELL = -1
+    LOW_SELL = -2
 
 #A model might extend to class that is a abstract agent model including basic layouts
 class ARIMAAgent(Model):
@@ -34,20 +36,25 @@ class ARIMAAgent(Model):
         np.savez(pathOfImitatorObject,dataMemory=self.dataMemory,
                  dataTime=self.dataTime)
     # The method provides to send to message from self to another agent
-    def evaluate_behaviour(self,trainLength):
+    def evaluate_behaviour(self,trainLength,thresholding):
         t = self.dataTime[-1]
 
         if len(self.dataMemory)%1 == 0 and len(self.dataMemory) > trainLength:
-            print("bingo:",len(self.dataMemory))
             self.model = ARIMA(self.dataMemory[0:t + 1], order=(0, 1, 0))
             self.model_fit = self.model.fit(disp=0)
         if len(self.dataMemory) > trainLength:
             output = self.model_fit.forecast()
             predictionValue = output[0]
-            if (predictionValue - self.lastPrediction) > 0:
+            if predictionValue > thresholding[0]:
+                self.behaviourState = BehaviourState.HIGH_BUY
+            elif  predictionValue > thresholding[1]:
                 self.behaviourState = BehaviourState.BUY
-            else:
+            elif predictionValue > thresholding[2]:
+                self.behaviourState = BehaviourState.NONE
+            elif predictionValue > thresholding[3]:
                 self.behaviourState = BehaviourState.SELL
+            else:
+                self.behaviourState = BehaviourState.LOW_SELL
             self.lastPrediction = predictionValue
         else:
             self.lastPrediction = BehaviourState.NONE

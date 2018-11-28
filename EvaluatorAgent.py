@@ -1,9 +1,16 @@
 from ModelAgent import Model
 from MessageType import BehaviourState
 import numpy as np
+from sklearn.metrics import confusion_matrix
 import time
 import dill
 #Evaluator agent  receives data from other agents that try to  predict the next value of data that has a financial problem or any classification problem
+class BehaviourState:
+    HIGH_BUY = 2
+    BUY = 1
+    NONE = 0
+    SELL = -1
+    LOW_SELL = -2
 class EvaluatorAgent(Model):
 
     agentLastPredictionList = []
@@ -12,7 +19,7 @@ class EvaluatorAgent(Model):
     diffRealBehaviourValue = []
     overallscoreAgents = {}
     periodicScoreTableAgents = {}
-    periodOfData = 100
+    periodOfData = 10
     scoreOfTheLastBehaviours = {}
     # When evaluater receive a message from any agent it run receive_agent function
     def receive_agent_message(self,recevingObjectFromAgent):
@@ -48,26 +55,35 @@ class EvaluatorAgent(Model):
     def updateScores(self):
         for key in self.agentPredictionList:
             tempPredictionList = np.asarray(self.agentPredictionList[key])
-            realList = np.asarray(self.diffRealBehaviourValue)
-            self.overallscoreAgents[key] = np.sum(tempPredictionList * realList >= 0) / len(realList)
+            realList = self.dataClassMemory[1:]
+            confusionmatrix = confusion_matrix(realList, tempPredictionList, labels=[2, 1, 0, -1, -2])
+            np.set_printoptions(precision=2)
+            #To normalize row of the confusion matrix
+            drawConfusionMatrix = []
+            for i, d in enumerate(np.sum(confusionmatrix,axis=1)):
+                drawConfusionMatrix.append(confusionmatrix[i, :] / d)
+
+            #print(np.asarray(drawConfusionMatrix))
+            print(confusionmatrix)
+            print(np.sum(confusionmatrix,axis=1))
+            self.overallscoreAgents[key] = np.sum(tempPredictionList == realList) / len(realList)
+
         # This score give a frame succeed rate.It is different from updateScores due to it calculate truth table of a period of data
         # And it return a table that filled with true or not
 
     def calcLastBehavioursAgents(self):
         for key in self.agentPredictionList:
             tempPredictionList = np.asarray(self.agentPredictionList[key])
-            realList = np.asarray(self.diffRealBehaviourValue)
-            unique, counts = np.unique(realList, return_counts=True)
-            print("realList:",dict(zip(unique, counts)))
-            agentsScoreList = int(tempPredictionList[len(tempPredictionList) - 1] * realList[len(realList) - 1] > 0)
+            realList = self.dataClassMemory[1:]
+            agentsScoreList = int(tempPredictionList[len(tempPredictionList) - 1] == realList[len(realList) - 1])
             self.scoreOfTheLastBehaviours[key] = agentsScoreList
     #This score give a frame succeed rate.It is different from updateScores due to it calculate truth table of a period of data
     #And it return a table that filled with true or not
     def calcPeriodicScoresAgents(self):
         for key in self.agentPredictionList:
             tempPredictionList = np.asarray(self.agentPredictionList[key])
-            realList = np.asarray(self.diffRealBehaviourValue)
-            tempScores = np.sum(tempPredictionList[-self.periodOfData:] * realList[-self.periodOfData:] >= 0)/len(realList[-self.periodOfData:])
+            realList = self.dataClassMemory[1:]
+            tempScores = np.sum(tempPredictionList[-self.periodOfData:] == realList[-self.periodOfData:])/len(realList[-self.periodOfData:])
             self.periodicScoreTableAgents[key] = tempScores
     def getAgentPredictions(self):
         return self.agentPredictionList
@@ -83,11 +99,11 @@ class EvaluatorAgent(Model):
     def update(self):
         lenghtMemory = len(self.dataMemory)
         #To take difference between real datas in the real time
-        if len(self.diffRealBehaviourValue) != lenghtMemory - 1:
-            if self.dataMemory[lenghtMemory - 1] - self.dataMemory[lenghtMemory - 2] > 0:
-                 self.diffRealBehaviourValue.append(BehaviourState.BUY)
-            if self.dataMemory[lenghtMemory - 1] - self.dataMemory[lenghtMemory - 2] <= 0:
-                self.diffRealBehaviourValue.append(BehaviourState.SELL)
+        # if len(self.diffRealBehaviourValue) != lenghtMemory - 1:
+        #     if self.dataMemory[lenghtMemory - 1] - self.dataMemory[lenghtMemory - 2] > 0:
+        #          self.diffRealBehaviourValue.append(BehaviourState.BUY)
+        #     if self.dataMemory[lenghtMemory - 1] - self.dataMemory[lenghtMemory - 2] <= 0:
+        #         self.diffRealBehaviourValue.append(BehaviourState.SELL)
         self.calcPeriodicScoresAgents()
         self.updateScores()
         self.calcLastBehavioursAgents()
@@ -96,5 +112,16 @@ class EvaluatorAgent(Model):
     #this method recive broadcasting data from server after every broadcast is actualized
     def receive_server_broadcast_message(self, receivingObjectFromServer):
         self.log_info('ReceivedFromServer: %s' % receivingObjectFromServer.message[0])
-        self.dataMemory.append(receivingObjectFromServer.message[0])
+        temp = 0
+        if receivingObjectFromServer.message[0] > self.thresholdArray[0]:
+            temp = BehaviourState.HIGH_BUY
+        elif receivingObjectFromServer.message[0] > self.thresholdArray[1]:
+            temp = BehaviourState.BUY
+        elif receivingObjectFromServer.message[0] > self.thresholdArray[2]:
+            temp = BehaviourState.NONE
+        elif receivingObjectFromServer.message[0] > self.thresholdArray[3]:
+            temp = BehaviourState.SELL
+        else:
+            temp = BehaviourState.LOW_SELL
         self.dataTime.append(receivingObjectFromServer.message[1])
+        self.dataClassMemory.append(temp)

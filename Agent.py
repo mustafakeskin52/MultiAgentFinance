@@ -4,6 +4,7 @@ import pickle
 import HelperFunctions as hp
 import numpy as np
 from Server import Server
+import pandas as pd
 from ARIMAAgent import ARIMAAgent
 from MajorityDecider import MajorityDecider
 from LinearRegAgent import LinearRegAgent
@@ -53,8 +54,12 @@ if __name__ == '__main__':
     #modelsList = loadDatas(modelsList,filePath)
     hp.loadDatas(modelsList,filePath)
     agentlist = hp.getAgentList(modelsList)#all agent names have been stored in this list
-    #data =hp.sinData(1000,30)# np.add(hp.sinData(1000,30), hp.sinData(1000,50))#hp.sinData(1000,30)#np.add(hp.sinData(1000,30), hp.sinData(1000,50))
-    data = hp.readDataFromCSV("AMD.CSV")[7000:]
+    #data = hp.sinData(1000,30)# np.add(hp.sinData(1000,30), hp.sinData(1000,50))#hp.sinData(1000,30)#np.add(hp.sinData(1000,30), hp.sinData(1000,50))
+    s = pd.Series(hp.readDataFromCSV("AMD.CSV")[8000:])
+    data = np.asarray(s.pct_change())[1:]*100
+    thresholdingVector = hp.findOptimalThresholds(data,5)
+    #Setting evaluater thresholding vector table so that class loss error will be calculated by the evaluater
+    modelsList[4].setThresholding(thresholdingVector)
     for i,d in enumerate(data):
         #In the loop for testing some probabilities
         majorityDeciderFeedBack = []
@@ -72,10 +77,10 @@ if __name__ == '__main__':
         m1.messageType = "behaviourTruthLast"
         hp.communicateALLAgents(modelsList, m1.senderId, sendingObjectList)
 
-        modelsList[0].evaluate_behaviour(3)
-        modelsList[1].evaluate_behaviour(5)
-        modelsList[2].evaluate_behaviour(3)
-        modelsList[3].evaluate_behaviour(5)
+        modelsList[0].evaluate_behaviour(3,thresholdingVector)
+        modelsList[1].evaluate_behaviour(5,thresholdingVector)
+        modelsList[2].evaluate_behaviour(3,thresholdingVector)
+        modelsList[3].evaluate_behaviour(5,thresholdingVector)
 
         sendingObjectList = {"model1": None, "model2": None, "model3": None,"arima":None,"evaluater":m1,"imitator":None,"majorityDecider":None}
 

@@ -12,7 +12,12 @@ class BehaviourState:
 
 #A model might extend to class that is a abstract agent model including basic layouts
 class LinearRegAgent(Model):
+    lastN = 0
+    thresholding = []
 
+    def on_init_properity(self,lastN,thresholding):
+        self.lastN = lastN
+        self.thresholding = thresholding
     def receive_agent_message(self,receivingObjectFromAgent):
         if receivingObjectFromAgent != None:
             self.log_info('ReceivedFromAgent: %s' % receivingObjectFromAgent.senderId)
@@ -32,24 +37,24 @@ class LinearRegAgent(Model):
         np.savez(pathOfImitatorObject,dataMemory=self.dataMemory,
                  dataTime=self.dataTime)
     # The method provide to send to message from self to another agent
-    def evaluate_behaviour(self,lastN,thresholding):
+    def evaluate_behaviour(self):
         t = self.dataTime[-1]+1
-        time = np.arange(t - lastN, t, 1)
+        time = np.arange(t - self.lastN, t, 1)
         time = time.reshape(-1, 1)
 
-        if len(self.dataMemory) >= lastN:
+        if len(self.dataMemory) >= self.lastN:
             #print(t)
             regr = linear_model.LinearRegression()
-            regr.fit(time,self.dataMemory[t - lastN:t])
+            regr.fit(time,self.dataMemory[t - self.lastN:t])
             predictionValue = regr.predict(t)
 
-            if predictionValue > thresholding[0]:
+            if predictionValue > self.thresholding[0]:
                 self.behaviourState = BehaviourState.HIGH_BUY
-            elif predictionValue > thresholding[1]:
+            elif predictionValue > self.thresholding[1]:
                 self.behaviourState = BehaviourState.BUY
-            elif predictionValue > thresholding[2]:
+            elif predictionValue > self.thresholding[2]:
                 self.behaviourState = BehaviourState.NONE
-            elif predictionValue > thresholding[3]:
+            elif predictionValue > self.thresholding[3]:
                 self.behaviourState = BehaviourState.SELL
             else:
                 self.behaviourState = BehaviourState.LOW_SELL

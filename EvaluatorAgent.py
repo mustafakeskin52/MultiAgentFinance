@@ -21,7 +21,12 @@ class EvaluatorAgent(Model):
     periodicScoreTableAgents = {}
     periodOfData = 10
     scoreOfTheLastBehaviours = {}
+    thresholdArray = []
+
+    def on_init_properity(self,thresholding):
+        self.thresholdArray = thresholding
     # When evaluater receive a message from any agent it run receive_agent function
+
     def receive_agent_message(self,recevingObjectFromAgent):
         if self.agentPredictionList.__contains__(recevingObjectFromAgent.senderId):
             self.agentPredictionList[recevingObjectFromAgent.senderId].append(recevingObjectFromAgent.message)
@@ -63,8 +68,8 @@ class EvaluatorAgent(Model):
             for i, d in enumerate(np.sum(confusionmatrix,axis=1)):
                 drawConfusionMatrix.append(confusionmatrix[i, :] / d)
 
-            #print(np.asarray(drawConfusionMatrix))
-            print(confusionmatrix)
+            print(np.asarray(drawConfusionMatrix))
+            #print(confusionmatrix)
             print(np.sum(confusionmatrix,axis=1))
             self.overallscoreAgents[key] = np.sum(tempPredictionList == realList) / len(realList)
 

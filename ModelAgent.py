@@ -12,7 +12,6 @@ class Model(Agent):
     dataMemory = []
     dataClassMemory = []
     dataTime = []
-    thresholdArray = []
     behaviourState = 0
     #PULL-PUSH relationship communication is actualized with this function
 
@@ -32,9 +31,6 @@ class Model(Agent):
             self.log_info('ReceivedFromAgent: %s' % receivingObjectFromAgent.senderId)
             self.log_info('ReceivedFromAgent: %s' % receivingObjectFromAgent.message)
 
-    #This method might be overrided when child class is writing
-    def setThresholding(self,thresholdingArray):
-        self.thresholdArray = thresholdingArray
     def receive_server_broadcast_message(self, receivingObjectFromServer):
         self.log_info('ReceivedFromServer: %s' % receivingObjectFromServer.message[0])
         self.dataMemory.append(receivingObjectFromServer.message[0])

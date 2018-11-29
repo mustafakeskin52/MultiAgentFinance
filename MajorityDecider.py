@@ -1,13 +1,12 @@
 from ModelAgent import Model
 import numpy as np
 from sklearn import linear_model
-
 class BehaviourState:
-    HIGH_BUY = 2
-    BUY = 1
-    NONE = 0
-    SELL = -1
-    LOW_SELL = -2
+    HIGH_BUY = 4
+    BUY = 3
+    NONE = 2
+    SELL = 1
+    LOW_SELL = 0
 
 class MajorityDecider(Model):
     agentsBeheviours = []

@@ -55,8 +55,8 @@ class ConfigLSTM(GenericConfig):
         self.VALID_BATCH_SIZE = 5
 
         # Model params
-        self.INPUT_SIZE = 12
-        self.OUTPUT_SIZE = 16
+        self.INPUT_SIZE = 5
+        self.OUTPUT_SIZE = 5
         self.SEQ_LEN = 10
 
 class ConfigCNN(GenericConfig):

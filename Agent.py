@@ -1,11 +1,19 @@
 import time
+import config
 import os.path
 import pickle
+import model
+import dataset
 import HelperFunctions as hp
 import numpy as np
 from Server import Server
+from Experiment import Experiment
 import pandas as pd
+import mnist_main
+from torch.utils.data import DataLoader
+from tensorboardX import SummaryWriter
 from ARIMAAgent import ARIMAAgent
+from tqdm import trange, tqdm
 from MajorityDecider import MajorityDecider
 from LinearRegAgent import LinearRegAgent
 from EvaluatorAgent import EvaluatorAgent
@@ -16,11 +24,33 @@ from osbrain import run_agent
 from osbrain import run_nameserver
 from osbrain import Agent
 from sklearn import linear_model
+class BehaviourState:
+    HIGH_BUY = 4
+    BUY = 3
+    NONE = 2
+    SELL = 1
+    LOW_SELL = 0
+
+def dataToClassFunc(data,thresholding):
+    result = np.zeros(data.shape[0])
+    for i,d in enumerate(data):
+        if d > thresholding[0]:
+            result[i] = BehaviourState.HIGH_BUY
+        elif d > thresholding[1]:
+            result[i] = BehaviourState.BUY
+        elif d > thresholding[2]:
+            result[i] = BehaviourState.NONE
+        elif d > thresholding[3]:
+            result[i] = BehaviourState.SELL
+        else:
+            result[i] = BehaviourState.LOW_SELL
+    return result
 def initialize_agent():
-    # data = hp.sinData(1000,30)# np.add(hp.sinData(1000,30), hp.sinData(1000,50))#hp.sinData(1000,30)#np.add(hp.sinData(1000,30), hp.sinData(1000,50))
-    s = pd.Series(hp.readDataFromCSV("AMD.CSV")[0:2000])
-    data = np.asarray(s.pct_change())[1:] * 100
+    data = np.asarray(hp.sinData(1000,30))# np.add(hp.sinData(1000,30), hp.sinData(1000,50))#hp.sinData(1000,30)#np.add(hp.sinData(1000,30), hp.sinData(1000,50))
+    #s = pd.Series(hp.readDataFromCSV("AMD.CSV")[0:2000])
+    #data = np.asarray(s.pct_change())[1:] * 100
     thresholdingVector = hp.findOptimalThresholds(data, 5)
+
     # Setting evaluater thresholding vector table so that class loss error will be calculated by the evaluater
     model1 = run_agent('Model1', base=LinearRegAgent)
     model3 = run_agent('Model3', base=MovingAverageAgent)
@@ -48,17 +78,27 @@ def initialize_agent():
     modelsList.append(imitator)
     modelsList.append(majorityDecider)
 
-    return modelsList,data
+    return modelsList,data,dataToClassFunc(data, thresholdingVector)
 if __name__ == '__main__':
     modelsList = []
     filePath = "globalsave"
     ns = run_nameserver()
     server = run_agent('Server', base=Server)
-    modelsList, data = initialize_agent()
+
+    config = config.ConfigLSTM()
+
+    modelsList, data, classDatas = initialize_agent()
+    #config.save()
+    #dataset = dataset.OnlineLearningFinancialData(seq_len=config.SEQ_LEN,data = classDatas,categoricalN=5)
+    #model = model.LSTM(input_size=config.INPUT_SIZE, seq_length=config.SEQ_LEN, num_layers=2,
+    #                  out_size=config.OUTPUT_SIZE, hidden_size=5, batch_size=config.TRAIN_BATCH_SIZE,
+    #                   device=config.DEVICE)
+    #experiment = Experiment(config=config, model=model, dataset=dataset)
+    #experiment.run()
+
     hp.initialConnectionsAgent(modelsList,server)
     # Send messages
     m1 = MessageType()
-
     #modelsList = loadDatas(modelsList,filePath)
     hp.loadDatas(modelsList,filePath)
     agentlist = hp.getAgentList(modelsList)#all agent names have been stored in this list

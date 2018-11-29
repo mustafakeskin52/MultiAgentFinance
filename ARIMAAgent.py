@@ -5,11 +5,11 @@ from statsmodels.tsa.arima_model import ARIMA
 from sklearn.metrics import mean_squared_error
 
 class BehaviourState:
-    HIGH_BUY = 2
-    BUY = 1
-    NONE = 0
-    SELL = -1
-    LOW_SELL = -2
+    HIGH_BUY = 4
+    BUY = 3
+    NONE = 2
+    SELL = 1
+    LOW_SELL = 0
 
 #A model might extend to class that is a abstract agent model including basic layouts
 class ARIMAAgent(Model):

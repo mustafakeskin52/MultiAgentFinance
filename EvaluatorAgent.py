@@ -6,11 +6,11 @@ import time
 import dill
 #Evaluator agent  receives data from other agents that try to  predict the next value of data that has a financial problem or any classification problem
 class BehaviourState:
-    HIGH_BUY = 2
-    BUY = 1
-    NONE = 0
-    SELL = -1
-    LOW_SELL = -2
+    HIGH_BUY = 4
+    BUY = 3
+    NONE = 2
+    SELL = 1
+    LOW_SELL = 0
 class EvaluatorAgent(Model):
 
     agentLastPredictionList = []
@@ -61,7 +61,7 @@ class EvaluatorAgent(Model):
         for key in self.agentPredictionList:
             tempPredictionList = np.asarray(self.agentPredictionList[key])
             realList = self.dataClassMemory[1:]
-            confusionmatrix = confusion_matrix(realList, tempPredictionList, labels=[2, 1, 0, -1, -2])
+            confusionmatrix = confusion_matrix(realList, tempPredictionList, labels=[4, 3, 2,1,0])
             np.set_printoptions(precision=2)
             #To normalize row of the confusion matrix
             drawConfusionMatrix = []
@@ -103,12 +103,7 @@ class EvaluatorAgent(Model):
     #After real behaviours of data are calculated,at difference between real value and prediction  is calculated
     def update(self):
         lenghtMemory = len(self.dataMemory)
-        #To take difference between real datas in the real time
-        # if len(self.diffRealBehaviourValue) != lenghtMemory - 1:
-        #     if self.dataMemory[lenghtMemory - 1] - self.dataMemory[lenghtMemory - 2] > 0:
-        #          self.diffRealBehaviourValue.append(BehaviourState.BUY)
-        #     if self.dataMemory[lenghtMemory - 1] - self.dataMemory[lenghtMemory - 2] <= 0:
-        #         self.diffRealBehaviourValue.append(BehaviourState.SELL)
+
         self.calcPeriodicScoresAgents()
         self.updateScores()
         self.calcLastBehavioursAgents()

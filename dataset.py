@@ -107,6 +107,65 @@ class SequenceLearningOneToOne(GenericDataset):
 
         def __getitem__(self, ix):
             return self.data[ix, :], self.labels[ix]
+class OnlineLearningFinancialData(GenericDataset):
+    def __init__(self,seq_len=10,data = [],categoricalN = 5):
+        train_valid_ration = 0.90
+
+        train_len = int(data.shape[0] * train_valid_ration)
+
+        self.raw_dataset_x_training = data[0:train_len]
+        self.raw_dataset_x_validation = data[train_len:]
+
+        self.train_dataset = self.Inner(self.raw_dataset_x_training,seq_len,categoricalN)
+        self.valid_dataset = self.Inner(self.raw_dataset_x_validation,seq_len,categoricalN)
+
+        #To calculate P(A1 = 1/A0 = 1) and extended as a generic version rather than just one conditional probability
+        # for i in range(3):
+        #     for j in range(3):
+        #         for k in range(-1,2,2):
+        #             for l in range(-1,2,2):
+        #                 indices = np.where(self.raw_dataset_x_training[:,i] == k)[0]
+        #                 conditionalTotalCount = len(indices)
+        #                 givenTotalCount = len(np.where(self.raw_dataset_x_training[indices,j] == l)[0])
+        #                 print("P(A{:d}={:d}/A{:d}={:d})={:f}".format(j,l,i,k,givenTotalCount/conditionalTotalCount))
+
+    class Inner(torch.utils.data.Dataset, GenericDataset):
+        def __init__(self,datasetX,seq_len,categoricalN):
+            X = []
+            y = []
+            for i in range(datasetX.shape[0]-seq_len):
+                X.append(datasetX[i:i+seq_len])
+                y.append(datasetX[i+seq_len])
+            X = np.asarray(X)
+            y = np.asarray(y)
+            #seq_len, dataset_len,input_size
+            X = to_categorical(X,categoricalN)
+
+            X = X.transpose([1, 0, 2])
+            print(X)
+            #y = self.binary_to_decimal(y)
+
+           # print(np.array(X).shape)
+            y = y.T
+            print(y)
+
+            self.data = torch.FloatTensor(X)
+            self.labels = torch.LongTensor(y)
+        def binary_to_decimal(self,y):
+            result = []
+            for i in range(y.shape[0]):
+                sum = 0
+                mul = 1
+                for j in range(y.shape[1]):
+                    sum = sum+mul*y[i,y.shape[1]-j-1]
+                    mul = mul*2
+                result.append(sum)
+            return np.asarray(result)
+        def __len__(self):
+            return self.data.shape[1]
+
+        def __getitem__(self, ix):
+            return self.data[:, ix, :], self.labels[ix]
 class FinancialDataSet(GenericDataset):
     def __init__(self,seq_len=10):
         train_valid_ration = 0.99

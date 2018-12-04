@@ -59,18 +59,18 @@ class EvaluatorAgent(Model):
     #This score is a rate over 1.00
     def updateScores(self):
         for key in self.agentPredictionList:
+            print("name:",key)
             tempPredictionList = np.asarray(self.agentPredictionList[key])
             realList = self.dataClassMemory[1:]
-            confusionmatrix = confusion_matrix(realList, tempPredictionList, labels=[4, 3, 2,1,0])
-            np.set_printoptions(precision=2)
-            #To normalize row of the confusion matrix
-            drawConfusionMatrix = []
-            for i, d in enumerate(np.sum(confusionmatrix,axis=1)):
-                drawConfusionMatrix.append(confusionmatrix[i, :] / d)
-
-            print(np.asarray(drawConfusionMatrix))
-            #print(confusionmatrix)
-            print(np.sum(confusionmatrix,axis=1))
+            # confusionmatrix = confusion_matrix(realList, tempPredictionList, labels=[4, 3, 2,1,0])
+            # np.set_printoptions(precision=2)
+            # #To normalize row of the confusion matrix
+            # drawConfusionMatrix = []
+            # for i, d in enumerate(np.sum(confusionmatrix,axis=1)):
+            #     drawConfusionMatrix.append(confusionmatrix[i, :] / d)
+            #
+            # print(np.asarray(drawConfusionMatrix))
+            # print(np.sum(confusionmatrix,axis=1))
             self.overallscoreAgents[key] = np.sum(tempPredictionList == realList) / len(realList)
 
         # This score give a frame succeed rate.It is different from updateScores due to it calculate truth table of a period of data
@@ -86,8 +86,18 @@ class EvaluatorAgent(Model):
     #And it return a table that filled with true or not
     def calcPeriodicScoresAgents(self):
         for key in self.agentPredictionList:
+            print("name:", key)
             tempPredictionList = np.asarray(self.agentPredictionList[key])
             realList = self.dataClassMemory[1:]
+            confusionmatrix = confusion_matrix(realList[-self.periodOfData:], tempPredictionList[-self.periodOfData:], labels=[4, 3, 2, 1, 0])
+            np.set_printoptions(precision=2)
+            # To normalize row of the confusion matrix
+            drawConfusionMatrix = []
+            for i, d in enumerate(np.sum(confusionmatrix, axis=1)):
+                drawConfusionMatrix.append(confusionmatrix[i, :] / d)
+
+            print(np.asarray(drawConfusionMatrix))
+            print(np.sum(confusionmatrix, axis=1))
             tempScores = np.sum(tempPredictionList[-self.periodOfData:] == realList[-self.periodOfData:])/len(realList[-self.periodOfData:])
             self.periodicScoreTableAgents[key] = tempScores
     def getAgentPredictions(self):

@@ -59,7 +59,7 @@ class Experiment:
 
     def run_epoch(self, epoch):
 
-        self.model.init_hidden()
+        #self.model.init_hidden()
         for step, (X, y) in enumerate(self.train_dataloader):
             # Fit the model
             self.model.fit(X, y)
@@ -72,7 +72,7 @@ class Experiment:
         #TODO:Inputdatas is a array keeping statistical information such as counts or histogram and it will be implemented inside statisticalDatas method
         #inputdatas = np.zeros((possibleStates ^ agentNumbers, agentNumbers + 2))
         #labelDatas = np.zeros((np.power(2, agentNumbers), agentNumbers + 2))
-        self.model.init_hidden()
+        #self.model.init_hidden()
         for step, (X, y) in enumerate(self.valid_dataloader):
 
             # Validate validation set
@@ -85,19 +85,20 @@ class Experiment:
         #print("labelDatas", labelDatas)
         score = score/self.valid_dataloader.__len__()
         # Predict
-        X_sample, y_sample = self.dataset.random_train_sample(n=2)
-        predicted_labels = self.model.predict(X_sample).cpu().detach()
+        #X_sample, y_sample = self.dataset.random_train_sample(n=2)
+        #predicted_labels = self.model.predict(X_sample).cpu().detach()
         # predicted_labels = prediction_logprob
 
         # Log
-        print("========================================")
+        print("=============="
+              "==========================")
         print("Training Loss: {}".format(training_loss))
         print("Validation Loss: {}".format(validation_loss))
         print("Score: {}".format(score))
         #print("X_sampleshape",X_sample.shape)
         # print('Actual label:', self.dataset.sequentialClass[y_sample])
-        # print('Sample label:',self.dataset.sequentialClass[torch.argmax(X_sample, 2)])
-        # print('Predicted label:', self.dataset.sequentialClass[predicted_labels])
+        #print('Sample label:',self.dataset.sequentialClass[torch.argmax(X_sample, 2)])
+        #print('Predicted label:', self.dataset.sequentialClass[predicted_labels])
         print("========================================")
 
         # Write losses to the tensorboard
@@ -147,21 +148,22 @@ if __name__ == "__main__":
     4. Pass config to experiment
     5. Run
     """
-    # config = config.ConfigCNN()
+    config = config.ConfigCNN()
     #
-    # dataset = dataset.MNISTDataset(config)
+    dataset = dataset.CNN1DDataSet(seq_len=20)
+    #dataset = dataset.MNISTDataset(config)
 
-    config = config.ConfigLSTM()
+    #config = config.ConfigLSTM()
     # dataset = dataset.SequenceLearningOneToOne()
     # model = model.LSTM(input_size=10, seq_length=1, num_layers=1,
     #                    out_size=10, hidden_size=10, batch_size=1, device=config.DEVICE)
     config.save()
-    dataset = dataset.FinancialDataSet(seq_len=config.SEQ_LEN)
-    model = model.LSTM(input_size=config.INPUT_SIZE, seq_length=config.SEQ_LEN, num_layers=2,
-                          out_size=config.OUTPUT_SIZE, hidden_size=5, batch_size=config.TRAIN_BATCH_SIZE,
-                          device=config.DEVICE)
+    #dataset = dataset.FinancialDataSet(seq_len=config.SEQ_LEN)
+    # model = model.LSTM(input_size=config.INPUT_SIZE, seq_length=config.SEQ_LEN, num_layers=2,
+    #                       out_size=config.OUTPUT_SIZE, hidden_size=5, batch_size=config.TRAIN_BATCH_SIZE,
+    #                       device=config.DEVICE)
     #
-    # # model = model.CNN(config)
+    model = model.CNN(config)
     #
 
     experiment = Experiment(config=config, model=model, dataset=dataset)

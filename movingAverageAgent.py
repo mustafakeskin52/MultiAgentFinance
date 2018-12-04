@@ -10,7 +10,6 @@ class BehaviourState:
     SELL = 1
     LOW_SELL = 0
 
-
 #A model might extend to class that is a abstract agent model including basic layouts
 class MovingAverageAgent(Model):
     movingAverageCoef = 0

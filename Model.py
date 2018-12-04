@@ -12,7 +12,7 @@ from torch import optim
 from tensorboardX import SummaryWriter
 
 import config
-
+import time
 class GenericModel(nn.Module):
 
     def __init__(self):
@@ -48,7 +48,6 @@ class GenericModel(nn.Module):
                 output,loss = self.train_on_batch(xs, ys)
             else:
                 output,loss = self.validate_on_batch(xs, ys)
-
             losses = np.append(losses, loss.item())
 
         if train:
@@ -231,6 +230,7 @@ class GenericModel(nn.Module):
     def score(self, X, y):
         # score(X, y[, sample_weight])	Returns the mean accuracy on the given test data and labels.
         predicted = self.predict(X)
+        print("predict",predicted)
         correct = (predicted == y).sum().item()
         return correct/(y.size()[0])
 
@@ -304,27 +304,32 @@ class CNN(GenericModel):
         GenericModel.__init__(self)
         self.device = config.DEVICE
 
-        self.conv1 = nn.Conv2d(in_channels=config.INPUT_SIZE, out_channels=10,
+        self.conv1 = nn.Conv1d(in_channels=config.INPUT_SIZE, out_channels=10,
                                kernel_size=5, stride=1,
                                padding=0, dilation=1, groups=1, bias=True)
-        self.conv2 = nn.Conv2d(in_channels=10, out_channels=20,
+        self.conv2 = nn.Conv1d(in_channels=10, out_channels=10,
                                kernel_size=5, stride=1,
                                padding=0, dilation=1, groups=1, bias=True)
 
-        self.conv2_drop = nn.Dropout2d()
-        self.fc1 = nn.Linear(320, 50)
-        self.fc2 = nn.Linear(50, config.OUTPUT_SIZE)
+        self.conv2_drop = nn.Dropout()
+        self.fc1 = nn.Linear(20,10)
+        self.fc2 = nn.Linear(10, config.OUTPUT_SIZE)
 
         self.criterion = nn.NLLLoss()
         self.optimizer = optim.Adam(self.parameters(), 0.005)
 
     def forward(self, x):
-        x = F.relu(F.max_pool2d(self.conv1(x), kernel_size=2))
-        x = F.relu(F.max_pool2d(self.conv2_drop(self.conv2(x)), kernel_size=2))
-        x = x.view(-1, 320)
+        #print("1",x.shape)
+        x = F.relu(F.max_pool1d(self.conv1(x), kernel_size=2))
+        #print("2", x.shape)
+        x = F.relu(F.max_pool1d(self.conv2_drop(self.conv2(x)), kernel_size=2))
+        #print("3",x.shape)
+        x = x.view(-1,20)
+        #print("4",x.shape)
         x = F.relu(self.fc1(x))
         x = F.dropout(x, training=self.training)
         x = self.fc2(x)
+        #print(x.shape)
         return F.log_softmax(x, dim=1)
 
     def dummy_input(self):

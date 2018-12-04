@@ -4,6 +4,7 @@ import os.path
 import pickle
 import model
 import dataset
+from LSTM_PREDICTOR import LSTM_PREDICTOR
 import HelperFunctions as hp
 import numpy as np
 from Server import Server
@@ -31,30 +32,26 @@ class BehaviourState:
     SELL = 1
     LOW_SELL = 0
 
-def dataToClassFunc(data,thresholding):
-    result = np.zeros(data.shape[0])
-    for i,d in enumerate(data):
-        if d > thresholding[0]:
-            result[i] = BehaviourState.HIGH_BUY
-        elif d > thresholding[1]:
-            result[i] = BehaviourState.BUY
-        elif d > thresholding[2]:
-            result[i] = BehaviourState.NONE
-        elif d > thresholding[3]:
-            result[i] = BehaviourState.SELL
-        else:
-            result[i] = BehaviourState.LOW_SELL
-    return result
 def initialize_agent():
-    data = np.asarray(hp.sinData(1000,30))# np.add(hp.sinData(1000,30), hp.sinData(1000,50))#hp.sinData(1000,30)#np.add(hp.sinData(1000,30), hp.sinData(1000,50))
-    #s = pd.Series(hp.readDataFromCSV("AMD.CSV")[0:2000])
-    #data = np.asarray(s.pct_change())[1:] * 100
-    thresholdingVector = hp.findOptimalThresholds(data, 5)
+    data = pd.DataFrame(data = np.add(hp.sinData(1000,10), hp.cosData(1000,30)))#np.add(hp.sinData(1000,30), hp.sinData(1000,50)) #np.asarray(hp.sinData(1000,30))#hp.sinData(1000,30)#np.add(hp.sinData(1000,30), hp.sinData(1000,50))
+    s = data.iloc[0:900]
+    #s = pd.Series(hp.readDataFromCSV("AMD.CSV")[6000:9000])
+    trainingdata = np.asarray(s.pct_change())[1:] * 100
+    thresholdingVector = hp.findOptimalThresholds(trainingdata, 5)
+    #trainingdata = trainingdata.squeeze(axis=1)
 
+    """
+        
+    """
+    #s = pd.Series(hp.readDataFromCSV("AMD.CSV")[8900:9000])
+    s = data[900:1000]
+    testdata = np.asarray(s.pct_change())[1:] * 100
+    #testdata = testdata.squeeze(axis=1)
     # Setting evaluater thresholding vector table so that class loss error will be calculated by the evaluater
     model1 = run_agent('Model1', base=LinearRegAgent)
     model3 = run_agent('Model3', base=MovingAverageAgent)
     evaluate_agent = run_agent('Evaluator', base=EvaluatorAgent)
+    lstm_agent = run_agent('LSTM_Agent',base = LSTM_PREDICTOR)
     imitator = run_agent('Imitator', base=ImitatorAgent)
     majorityDecider = run_agent('MajorityDecider', base=MajorityDecider)
     arimaAgent = run_agent('ARIMAAgent', base=ARIMAAgent)
@@ -64,21 +61,25 @@ def initialize_agent():
     arimaAgent.uniqueId = "arima"
     evaluate_agent.uniqueId = "evaluater"
     imitator.uniqueId = "imitator"
+    lstm_agent.uniqueId = "lstm_agent"
     majorityDecider.uniqueId = "majorityDecider"
 
     model1.on_init_properity(3,thresholdingVector)
     model3.on_init_properity(5,thresholdingVector)
+    lstm_agent.on_init_properity(None,thresholdingVector)
     arimaAgent.on_init_properity(5,thresholdingVector)
     evaluate_agent.on_init_properity(thresholdingVector)
 
+    lstm_agent.train(trainingdata)
+
     modelsList.append(model1)
-    modelsList.append(model3)
+    modelsList.append(lstm_agent)
     modelsList.append(arimaAgent)
     modelsList.append(evaluate_agent)
     modelsList.append(imitator)
     modelsList.append(majorityDecider)
 
-    return modelsList,data,dataToClassFunc(data, thresholdingVector)
+    return modelsList,testdata
 if __name__ == '__main__':
     modelsList = []
     filePath = "globalsave"
@@ -87,7 +88,7 @@ if __name__ == '__main__':
 
     config = config.ConfigLSTM()
 
-    modelsList, data, classDatas = initialize_agent()
+    modelsList, data = initialize_agent()
     #config.save()
     #dataset = dataset.OnlineLearningFinancialData(seq_len=config.SEQ_LEN,data = classDatas,categoricalN=5)
     #model = model.LSTM(input_size=config.INPUT_SIZE, seq_length=config.SEQ_LEN, num_layers=2,
@@ -120,11 +121,12 @@ if __name__ == '__main__':
         """
         modelsList[3].update()
         print("time:",i)
+        print("data:",d)
         """
             In this part of the agent.py code main loop after evaluater collects behaviours of the agents ,they decided to broadcast it to imitator.
             Therefore,at the first part of the code might be sended to a empty behaviours to the agents  
         """
-        sendingObjectList = {"model1": None,"model3": None,"arima":None,"evaluater": None, "imitator": m1,"majorityDecider":None}
+        sendingObjectList = {"model1": None,"lstm_agent": None,"arima":None,"evaluater": None, "imitator": m1,"majorityDecider":None}
         m1.message = modelsList[3].getLastBehavioursAgents()
         # # print("list",m1.message)
         m1.senderId = "evaluater"
@@ -141,7 +143,7 @@ if __name__ == '__main__':
         """
             All decisions is sending to evaluater before running majoritydecider or any decider agent.
         """
-        sendingObjectList = {"model1": None,"model3": None, "arima": None, "evaluater": m1,
+        sendingObjectList = {"model1": None,"lstm_agent": None, "arima": None, "evaluater": m1,
                              "imitator": None, "majorityDecider": None}
         for j in range(0,3,1):
             m1.message = modelsList[j].get_behaviourstate()
@@ -152,7 +154,7 @@ if __name__ == '__main__':
         """
             Evaluator is sending their datas to majoritydecider to take a greater score than all agents behaviours 
         """
-        sendingObjectList = {"model1": None,"model3": None,"arima":None,"evaluater": None, "imitator": None,
+        sendingObjectList = {"model1": None,"lstm_agent": None,"arima":None,"evaluater": None, "imitator": None,
                              "majorityDecider": m1}
         m1.message = majorityDeciderFeedBack
         m1.senderId = "evaluater"
@@ -166,7 +168,7 @@ if __name__ == '__main__':
             The purpose of  the majority decider algoritms must obtain a greater score than all agents.Hence,evaluater agents will be 
             argumentative. 
         """
-        sendingObjectList = {"model1": None,"model3": None,"arima":None, "evaluater": m1, "imitator": None,
+        sendingObjectList = {"model1": None,"lstm_agent": None,"arima":None, "evaluater": m1, "imitator": None,
                              "majorityDecider": None}
 
         m1.message = modelsList[-1].get_behaviourstate()
@@ -177,7 +179,7 @@ if __name__ == '__main__':
             Imitator object might be considered as a lstm that try to improve all agents performences.
             The differences between imitator and decider agents is that lstm might be more succesful than classical decider according to our plan
         """
-        sendingObjectList = {"model1": None,"model3": None,"arima":None,"evaluater": None, "imitator": m1,"majorityDecider": None}
+        sendingObjectList = {"model1": None,"lstm_agent": None,"arima":None,"evaluater": None, "imitator": m1,"majorityDecider": None}
         m1.message = modelsList[3].getAgentLastPredictionList()
         # print("list",m1.message)
         m1.senderId = "evaluater"

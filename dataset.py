@@ -9,7 +9,7 @@ import torch
 from torchvision import transforms
 import pandas as pd
 import numpy as np
-
+import HelperFunctions as hp
 
 import os
 import warnings
@@ -107,6 +107,7 @@ class SequenceLearningOneToOne(GenericDataset):
 
         def __getitem__(self, ix):
             return self.data[ix, :], self.labels[ix]
+
 class OnlineLearningFinancialData(GenericDataset):
     def __init__(self,seq_len=10,data = [],categoricalN = 5):
         train_valid_ration = 0.90
@@ -138,11 +139,13 @@ class OnlineLearningFinancialData(GenericDataset):
                 y.append(datasetX[i+seq_len])
             X = np.asarray(X)
             y = np.asarray(y)
+
             #seq_len, dataset_len,input_size
             X = to_categorical(X,categoricalN)
-
+            print(X.shape)
             X = X.transpose([1, 0, 2])
-            print(X)
+            print(X.shape)
+
             #y = self.binary_to_decimal(y)
 
            # print(np.array(X).shape)
@@ -166,6 +169,93 @@ class OnlineLearningFinancialData(GenericDataset):
 
         def __getitem__(self, ix):
             return self.data[:, ix, :], self.labels[ix]
+class BehaviourState:
+        HIGH_BUY = 4
+        BUY = 3
+        NONE = 2
+        SELL = 1
+        LOW_SELL = 0
+class CNN1DDataSet(GenericDataset):
+
+    def dataToClassFunc(self, data, thresholding):
+        result = np.zeros(data.shape[0])
+        for i, d in enumerate(data):
+            if d > thresholding[0]:
+                result[i] = BehaviourState.HIGH_BUY
+            elif d > thresholding[1]:
+                result[i] = BehaviourState.BUY
+            elif d > thresholding[2]:
+                result[i] = BehaviourState.NONE
+            elif d > thresholding[3]:
+                result[i] = BehaviourState.SELL
+            else:
+                result[i] = BehaviourState.LOW_SELL
+        return result
+    def __init__(self,seq_len=10):
+        train_valid_ration = 0.90
+        """
+            Example 1D-CNN Dataset
+            The dataset that is example set consist of a sinus data.After a sinus data had been created,its over carried out some preprocessing 
+            and its was ready to be given as CNN input set.  
+            It is possible that give a direct data  from out of the framework to CNN.If creating a new dataset,this preprocessing will be removed 
+            and will be given a directly all inputs to system on condition that calculated to input-output relationship 
+        """
+        data = pd.DataFrame(data = np.add(hp.sinData(1000,10), hp.cosData(1000,30)))
+        s = data.iloc[0:900]
+        trainingdata = np.asarray(s.pct_change())[1:] * 100
+        #raw_dataset = np.zeros(1000)+1
+        thresholdingVector = hp.findOptimalThresholds(trainingdata, 5)
+        raw_dataset = self.dataToClassFunc(trainingdata,thresholdingVector)
+        #print(raw_dataset)
+        train_len = int(raw_dataset.shape[0] * train_valid_ration)
+
+        raw_dataset_training = raw_dataset[10:train_len]
+        raw_dataset_validation = raw_dataset[train_len:-1]
+
+
+        self.train_dataset = self.Inner(raw_dataset_training,seq_len)
+        self.valid_dataset = self.Inner(raw_dataset_validation,seq_len)
+        #To calculate P(A1 = 1/A0 = 1) and extended as a generic version rather than just one conditional probability
+        # for i in range(3):
+        #     for j in range(3):
+        #         for k in range(-1,2,2):
+        #             for l in range(-1,2,2):
+        #                 indices = np.where(self.raw_dataset_x_training[:,i] == k)[0]
+        #                 conditionalTotalCount = len(indices)
+        #                 givenTotalCount = len(np.where(self.raw_dataset_x_training[indices,j] == l)[0])
+        #                 print("P(A{:d}={:d}/A{:d}={:d})={:f}".format(j,l,i,k,givenTotalCount/conditionalTotalCount))
+
+    class Inner(torch.utils.data.Dataset, GenericDataset):
+        def __init__(self,datasetX,seq_len):
+            X = []
+            y = []
+            for i in range(datasetX.shape[0]-seq_len):
+                X.append(datasetX[i:i+seq_len])
+                y.append(datasetX[i+seq_len])
+            X = np.asarray(X)
+            X = np.expand_dims(X, axis=1)
+            print(X.shape)
+            y = np.asarray(y)
+            #seq_len, dataset_len,input_size
+
+            self.data = torch.FloatTensor(X)
+            self.labels = torch.LongTensor(y)
+        def binary_to_decimal(self,y):
+            result = []
+            for i in range(y.shape[0]):
+                sum = 0
+                mul = 1
+                for j in range(y.shape[1]):
+                    sum = sum+mul*y[i,y.shape[1]-j-1]
+                    mul = mul*2
+                result.append(sum)
+            return np.asarray(result)
+
+        def __len__(self):
+            return self.data.shape[0]
+
+        def __getitem__(self, ix):
+            return self.data[ix,:], self.labels[ix]
 class FinancialDataSet(GenericDataset):
     def __init__(self,seq_len=10):
         train_valid_ration = 0.99
@@ -377,9 +467,6 @@ class MNISTDataset(GenericDataset):
                                                 transforms.Normalize((0.1307,), (0.3081,))
                                             ])
                                             )
-        # todo: check for transformation later
-
-
     def random_sample(self, n):
         perm = np.random.randint(0, self.train_dataset.__len__(), size=n)
         data = self.train_dataset.train_data.numpy()[perm]
@@ -445,8 +532,6 @@ class IndicatorDataset():
         dataset['low'] = dataset['low'].values.astype(np.float)
         dataset['adjusted_close'] = dataset['adjusted_close'].values.astype(np.float)
         dataset['volume'] = dataset['volume'].values.astype(np.float)
-
-
 
         # calculate technical analysis values from stock data
         # this creates a new dataset depends on technical analysis

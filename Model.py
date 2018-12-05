@@ -230,7 +230,7 @@ class GenericModel(nn.Module):
     def score(self, X, y):
         # score(X, y[, sample_weight])	Returns the mean accuracy on the given test data and labels.
         predicted = self.predict(X)
-        print("predict",predicted)
+
         correct = (predicted == y).sum().item()
         return correct/(y.size()[0])
 
@@ -317,6 +317,9 @@ class CNN(GenericModel):
 
         self.criterion = nn.NLLLoss()
         self.optimizer = optim.Adam(self.parameters(), 0.005)
+
+    def init_hidden(self):
+        return None
 
     def forward(self, x):
         #print("1",x.shape)

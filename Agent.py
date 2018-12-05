@@ -14,6 +14,7 @@ import mnist_main
 from torch.utils.data import DataLoader
 from tensorboardX import SummaryWriter
 from ARIMAAgent import ARIMAAgent
+from CNN_PREDICTOR import CNN_PREDICTOR
 from tqdm import trange, tqdm
 from MajorityDecider import MajorityDecider
 from LinearRegAgent import LinearRegAgent
@@ -33,7 +34,7 @@ class BehaviourState:
     LOW_SELL = 0
 
 def initialize_agent():
-    data = pd.DataFrame(data = np.add(hp.sinData(1000,10), hp.cosData(1000,30)))#np.add(hp.sinData(1000,30), hp.sinData(1000,50)) #np.asarray(hp.sinData(1000,30))#hp.sinData(1000,30)#np.add(hp.sinData(1000,30), hp.sinData(1000,50))
+    data = pd.DataFrame(data = np.add(hp.sinData(1000,10), hp.cosData(1000,50)))#np.add(hp.sinData(1000,30), hp.sinData(1000,50)) #np.asarray(hp.sinData(1000,30))#hp.sinData(1000,30)#np.add(hp.sinData(1000,30), hp.sinData(1000,50))
     s = data.iloc[0:900]
     #s = pd.Series(hp.readDataFromCSV("AMD.CSV")[6000:9000])
     trainingdata = np.asarray(s.pct_change())[1:] * 100
@@ -51,6 +52,7 @@ def initialize_agent():
     model1 = run_agent('Model1', base=LinearRegAgent)
     model3 = run_agent('Model3', base=MovingAverageAgent)
     evaluate_agent = run_agent('Evaluator', base=EvaluatorAgent)
+    cnn_agent = run_agent('CNN_Agent',base = CNN_PREDICTOR)
     lstm_agent = run_agent('LSTM_Agent',base = LSTM_PREDICTOR)
     imitator = run_agent('Imitator', base=ImitatorAgent)
     majorityDecider = run_agent('MajorityDecider', base=MajorityDecider)
@@ -58,23 +60,27 @@ def initialize_agent():
 
     model1.uniqueId = "model1"
     model3.uniqueId = "model3"
+    cnn_agent.uniqueId = "cnn_agent"
     arimaAgent.uniqueId = "arima"
     evaluate_agent.uniqueId = "evaluater"
     imitator.uniqueId = "imitator"
     lstm_agent.uniqueId = "lstm_agent"
     majorityDecider.uniqueId = "majorityDecider"
 
+    cnn_agent.on_init_properity(3,thresholdingVector)
     model1.on_init_properity(3,thresholdingVector)
     model3.on_init_properity(5,thresholdingVector)
     lstm_agent.on_init_properity(None,thresholdingVector)
     arimaAgent.on_init_properity(5,thresholdingVector)
     evaluate_agent.on_init_properity(thresholdingVector)
 
+    cnn_agent.train(trainingdata)
     lstm_agent.train(trainingdata)
 
     modelsList.append(model1)
     modelsList.append(lstm_agent)
     modelsList.append(arimaAgent)
+    modelsList.append(cnn_agent)
     modelsList.append(evaluate_agent)
     modelsList.append(imitator)
     modelsList.append(majorityDecider)
@@ -119,15 +125,15 @@ if __name__ == '__main__':
                 *Before agents will publish to their behaviours,evaluator should calculate their scores and return these scores as object to server
                 *The priority of the calculating scores can be important due to server priority that depended on agents based system 
         """
-        modelsList[3].update()
+        modelsList[4].update()
         print("time:",i)
         print("data:",d)
         """
             In this part of the agent.py code main loop after evaluater collects behaviours of the agents ,they decided to broadcast it to imitator.
             Therefore,at the first part of the code might be sended to a empty behaviours to the agents  
         """
-        sendingObjectList = {"model1": None,"lstm_agent": None,"arima":None,"evaluater": None, "imitator": m1,"majorityDecider":None}
-        m1.message = modelsList[3].getLastBehavioursAgents()
+        sendingObjectList = {"model1": None,"lstm_agent": None,"arima":None,"cnn_agent":None,"evaluater": None, "imitator": m1,"majorityDecider":None}
+        m1.message = modelsList[4].getLastBehavioursAgents()
         # # print("list",m1.message)
         m1.senderId = "evaluater"
         m1.messageType = "behaviourTruthLast"
@@ -137,15 +143,15 @@ if __name__ == '__main__':
             the for each loop range will be increased or changed.
             After passing this block,all the agents can explain their behaviours to server. 
         """
-        for j in range(0,3,1):
+        for j in range(0,4,1):
             modelsList[j].evaluate_behaviour()
 
         """
             All decisions is sending to evaluater before running majoritydecider or any decider agent.
         """
-        sendingObjectList = {"model1": None,"lstm_agent": None, "arima": None, "evaluater": m1,
+        sendingObjectList = {"model1": None,"lstm_agent": None,"arima":None,"cnn_agent": None, "evaluater": m1,
                              "imitator": None, "majorityDecider": None}
-        for j in range(0,3,1):
+        for j in range(0,4,1):
             m1.message = modelsList[j].get_behaviourstate()
             m1.senderId = modelsList[j].uniqueId
             m1.messageType = "behaviourOfAgentNow"
@@ -154,7 +160,7 @@ if __name__ == '__main__':
         """
             Evaluator is sending their datas to majoritydecider to take a greater score than all agents behaviours 
         """
-        sendingObjectList = {"model1": None,"lstm_agent": None,"arima":None,"evaluater": None, "imitator": None,
+        sendingObjectList = {"model1": None,"lstm_agent": None,"arima":None,"cnn_agent":None,"evaluater": None, "imitator": None,
                              "majorityDecider": m1}
         m1.message = majorityDeciderFeedBack
         m1.senderId = "evaluater"
@@ -168,7 +174,7 @@ if __name__ == '__main__':
             The purpose of  the majority decider algoritms must obtain a greater score than all agents.Hence,evaluater agents will be 
             argumentative. 
         """
-        sendingObjectList = {"model1": None,"lstm_agent": None,"arima":None, "evaluater": m1, "imitator": None,
+        sendingObjectList = {"model1": None,"lstm_agent": None,"arima":None,"cnn_agent":None, "evaluater": m1, "imitator": None,
                              "majorityDecider": None}
 
         m1.message = modelsList[-1].get_behaviourstate()
@@ -179,16 +185,16 @@ if __name__ == '__main__':
             Imitator object might be considered as a lstm that try to improve all agents performences.
             The differences between imitator and decider agents is that lstm might be more succesful than classical decider according to our plan
         """
-        sendingObjectList = {"model1": None,"lstm_agent": None,"arima":None,"evaluater": None, "imitator": m1,"majorityDecider": None}
-        m1.message = modelsList[3].getAgentLastPredictionList()
+        sendingObjectList = {"model1": None,"lstm_agent": None,"arima":None,"cnn_agent":None,"evaluater": None, "imitator": m1,"majorityDecider": None}
+        m1.message = modelsList[4].getAgentLastPredictionList()
         # print("list",m1.message)
         m1.senderId = "evaluater"
         m1.messageType = "behaviourOfAgentNow"
         hp.communicateALLAgents(modelsList, m1.senderId, sendingObjectList)
 
-        print("GeneralScores:",modelsList[3].getAgentScores())
-        print("PeriodicScores:",modelsList[3].getPeriodicScoreTableAgents())
+        print("GeneralScores:",modelsList[4].getAgentScores())
+        print("PeriodicScores:",modelsList[4].getPeriodicScoreTableAgents())
         #print("PeriodicDatas",modelsList[3].getPeriodicScoreTableAgents())
     #hp.saveDatas(modelsList, filePath)
-    modelsList[4].saveDataFrameCSV()
+    modelsList[5].saveDataFrameCSV()
     ns.shutdown()

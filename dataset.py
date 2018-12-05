@@ -175,6 +175,93 @@ class BehaviourState:
         NONE = 2
         SELL = 1
         LOW_SELL = 0
+class CNN1DOnlineDataSet(GenericDataset):
+
+    def __init__(self,raw_dataset = [],seq_len=10):
+        train_valid_ration = 0.90
+
+        #print(raw_dataset)
+        train_len = int(raw_dataset.shape[0] * train_valid_ration)
+
+        raw_dataset_training = raw_dataset[10:train_len]
+        raw_dataset_validation = raw_dataset[train_len:-1]
+
+
+        self.train_dataset = self.Inner(raw_dataset_training,seq_len)
+        self.valid_dataset = self.Inner(raw_dataset_validation,seq_len)
+        #To calculate P(A1 = 1/A0 = 1) and extended as a generic version rather than just one conditional probability
+        # for i in range(3):
+        #     for j in range(3):
+        #         for k in range(-1,2,2):
+        #             for l in range(-1,2,2):
+        #                 indices = np.where(self.raw_dataset_x_training[:,i] == k)[0]
+        #                 conditionalTotalCount = len(indices)
+        #                 givenTotalCount = len(np.where(self.raw_dataset_x_training[indices,j] == l)[0])
+        #                 print("P(A{:d}={:d}/A{:d}={:d})={:f}".format(j,l,i,k,givenTotalCount/conditionalTotalCount))
+
+    class Inner(torch.utils.data.Dataset, GenericDataset):
+        def __init__(self,datasetX,seq_len):
+            X = []
+            y = []
+            for i in range(datasetX.shape[0]-seq_len):
+                X.append(datasetX[i:i+seq_len])
+                y.append(datasetX[i+seq_len])
+            X = np.asarray(X)
+            X = np.expand_dims(X, axis=1)
+            print(X.shape)
+            y = np.asarray(y)
+            #seq_len, dataset_len,input_size
+
+            self.data = torch.FloatTensor(X)
+            self.labels = torch.LongTensor(y)
+
+
+        def __len__(self):
+            return self.data.shape[0]
+
+        def __getitem__(self, ix):
+            return self.data[ix,:], self.labels[ix]
+
+
+class OnlineDeciderDataSet(GenericDataset):
+    def __init__(self,raw_dataset_x,raw_dataset_y,seq_len=10):
+        train_valid_ration = 0.99
+
+        train_len = int(raw_dataset_x.shape[0] * train_valid_ration)
+
+        self.raw_dataset_x_training = raw_dataset_x[10:train_len]
+        self.raw_dataset_x_validation = raw_dataset_x[train_len:]
+        self.raw_dataset_y_training = raw_dataset_y[10:train_len]
+        self.raw_dataset_y_validation = raw_dataset_y[train_len:]
+
+        self.train_dataset = self.Inner(self.raw_dataset_x_training, self.raw_dataset_y_training, seq_len)
+        self.valid_dataset = self.Inner(self.raw_dataset_x_validation, self.raw_dataset_y_validation, seq_len)
+
+        class Inner(torch.utils.data.Dataset, GenericDataset):
+            def __init__(self, datasetX, datasetY, seq_len):
+                X = []
+                y = []
+                for i in range(datasetX.shape[0] - seq_len):
+                    X.append(datasetX[i:i + seq_len])
+                    y.append(datasetY[i + seq_len])
+                X = np.asarray(X)
+                y = np.asarray(y)
+                # seq_len, dataset_len,input_size
+                X = to_categorical(X, 3)
+                X = X.reshape(X.shape[0], X.shape[1], X.shape[2] * X.shape[3])
+                X = X.transpose([1, 0, 2])
+
+                # print(np.array(X).shape)
+                y = y.T
+                self.data = torch.FloatTensor(X)
+                self.labels = torch.LongTensor(y)
+
+            def __len__(self):
+                return self.data.shape[1]
+
+            def __getitem__(self, ix):
+                return self.data[:, ix, :], self.labels[ix]
+
 class CNN1DDataSet(GenericDataset):
 
     def dataToClassFunc(self, data, thresholding):
@@ -240,16 +327,6 @@ class CNN1DDataSet(GenericDataset):
 
             self.data = torch.FloatTensor(X)
             self.labels = torch.LongTensor(y)
-        def binary_to_decimal(self,y):
-            result = []
-            for i in range(y.shape[0]):
-                sum = 0
-                mul = 1
-                for j in range(y.shape[1]):
-                    sum = sum+mul*y[i,y.shape[1]-j-1]
-                    mul = mul*2
-                result.append(sum)
-            return np.asarray(result)
 
         def __len__(self):
             return self.data.shape[0]
@@ -268,6 +345,9 @@ class FinancialDataSet(GenericDataset):
         self.raw_dataset_x_validation = raw_dataset_x.iloc[train_len:, :-1].values
         self.raw_dataset_y_training = raw_dataset_y.iloc[10:train_len, :-1].values
         self.raw_dataset_y_validation = raw_dataset_y.iloc[train_len:, :-1].values
+
+        print(self.raw_dataset_x_training.shape)
+        print(self.raw_dataset_y_training.shape)
 
         self.train_dataset = self.Inner(self.raw_dataset_x_training,self.raw_dataset_y_training,seq_len)
         self.valid_dataset = self.Inner(self.raw_dataset_x_validation,self.raw_dataset_y_validation,seq_len)
@@ -1205,11 +1285,3 @@ class LoadDataset():
             return self.X[ix:ix + self.seq_length, :], self.y[ix + self.seq_length - 1: ix + self.seq_length * 2 - 1]
 
 
-if __name__ == "__main__":
-    config = Config()
-
-    dataset = IndicatorDataset(dataset_name='IndicatorDataset',
-                               input_path='../dataset/finance/stocks/stocks_sample.csv',
-                               train_valid_ratio=0.9)
-    print(dataset.train_dataset.__getitem__(14))
-    print()

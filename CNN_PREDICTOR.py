@@ -17,14 +17,15 @@ class BehaviourState:
     LOW_SELL = 0
 
 #A model might extend to the class that is a abstract agent model including basic layouts
-class LSTM_PREDICTOR(Model):
+class CNN_PREDICTOR(Model):
 
     lastPrediction = 0
-    model_lstm = None
+    timeSeriesLength = 20
+    model_cnn = None
     model_fit = None
     trainLength = 0
     thresholding = []
-    config = config.ConfigLSTM()
+    config = config.ConfigCNN()
     experiment = None
     def on_init_properity(self,trainLength,thresholding):
         self.trainLength = trainLength
@@ -49,18 +50,15 @@ class LSTM_PREDICTOR(Model):
                  dataTime=self.dataTime)
     def train(self,dataN):
         classDatas = self.dataToClassFunc(dataN,self.thresholding)
-        data = dataset.OnlineLearningFinancialData(seq_len=self.config.SEQ_LEN, data=classDatas, categoricalN=5)
-        self.model_lstm = model.LSTM(input_size=self.config.INPUT_SIZE, seq_length=self.config.SEQ_LEN, num_layers=2,
-                          out_size=self.config.OUTPUT_SIZE, hidden_size=5, batch_size=self.config.TRAIN_BATCH_SIZE,
-                           device=self.config.DEVICE)
+        data = dataset.CNN1DOnlineDataSet(raw_dataset=classDatas,seq_len=self.timeSeriesLength)
+        self.model_lstm = model.CNN(self.config)
         self.experiment = Experiment(config=self.config, model=self.model_lstm, dataset=data)
         self.experiment.run()
-        print("Actual:",classDatas[self.config.SEQ_LEN+100])
-        print("Predicted:",self.experiment.predict_lstm(classDatas[100:self.config.SEQ_LEN+100],self.config.INPUT_SIZE))
+        #print("Actual:",classDatas[self.config.SEQ_LEN+100])
+        #print("Predicted:",self.experiment.predict_lstm(classDatas[100:self.config.SEQ_LEN+100],self.config.INPUT_SIZE))
     def predict(self):
-        classDatas = self.dataToClassFunc(np.asarray(self.dataMemory[-self.config.SEQ_LEN:]),self.thresholding)
-        print(classDatas)
-        return np.asarray(self.experiment.predict_lstm(classDatas,self.config.INPUT_SIZE))[0]
+        classDatas = self.dataToClassFunc(np.asarray(self.dataMemory[-self.timeSeriesLength:]),self.thresholding)
+        return np.asarray(self.experiment.predict_cnn(classDatas))[0]
     def dataToClassFunc(self,data, thresholding):
         result = np.zeros(data.shape[0])
         for i, d in enumerate(data):
@@ -79,7 +77,7 @@ class LSTM_PREDICTOR(Model):
     def evaluate_behaviour(self):
         t = self.dataTime[-1]
 
-        if len(self.dataMemory) > self.config.SEQ_LEN:
+        if len(self.dataMemory) > self.timeSeriesLength:
             self.behaviourState = self.predict()
         else:
             self.behaviourState = BehaviourState.NONE

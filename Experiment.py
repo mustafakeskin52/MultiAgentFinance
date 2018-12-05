@@ -81,7 +81,7 @@ class Experiment:
         self.config.save()
         self.model.to_onnx(directory=self.config.EXPERIMENT_DIR)
         self.model.to_txt(directory=self.config.EXPERIMENT_DIR)
-    def predict(self,X,categoricalN):
+    def predict_lstm(self,X,categoricalN):
         # seq_len, dataset_len,input_size
         X = np.asarray(X)
         X = convert_to_categorical(X, categoricalN)
@@ -91,6 +91,13 @@ class Experiment:
         predicted_label = self.model.predict(torch.FloatTensor(X)).cpu().detach()
         return predicted_label
 
+    def predict_cnn(self, X):
+        # seq_len, dataset_len,input_size
+        X = np.asarray(X)
+        X = np.expand_dims(X,axis=0)
+        X = np.expand_dims(X,axis=0)
+        predicted_label = self.model.predict(torch.FloatTensor(X)).cpu().detach()
+        return predicted_label
     def run_epoch(self, epoch):
 
         self.model.init_hidden()
@@ -119,8 +126,7 @@ class Experiment:
         #print("labelDatas", labelDatas)
         score = score/self.valid_dataloader.__len__()
         # Predict
-        X_sample, y_sample = self.dataset.random_train_sample(n=2)
-        predicted_labels = self.model.predict(X_sample).cpu().detach()
+        #predicted_labels = self.model.predict(X_sample).cpu().detach()
         # predicted_labels = prediction_logprob
 
         # Log

@@ -250,7 +250,7 @@ class OnlineDeciderDataSet(GenericDataset):
                 y.append(datasetY[i + seq_len])
             X = np.asarray(X)
             y = np.asarray(y)
-
+            print("X.shape", X.shape)
             # seq_len, dataset_len,input_size
             X = to_categorical(X, 5)
             print("X.shape", X.shape)

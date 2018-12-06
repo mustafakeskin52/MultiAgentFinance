@@ -83,14 +83,22 @@ class Experiment:
         self.model.to_txt(directory=self.config.EXPERIMENT_DIR)
     def predict_lstm(self,X,categoricalN):
         # seq_len, dataset_len,input_size
-        X = np.asarray(X)
         X = convert_to_categorical(X, categoricalN)
         X = np.expand_dims(X,axis=0)
 
-        print("ShapeOf",X.shape)
         predicted_label = self.model.predict(torch.FloatTensor(X)).cpu().detach()
         return predicted_label
+    def predict_lstm_decider(self,X,categoricalN):
 
+        print("X.shapeP", X.shape)
+        X = np.expand_dims(X, axis=0)
+        print("X.shapeP", X.shape)
+        X = convert_to_categorical(X, categoricalN)
+        X = X.reshape(X.shape[0], X.shape[1], X.shape[2] * X.shape[3])
+
+        print("ShapeOf", X.shape)
+        predicted_label = self.model.predict(torch.FloatTensor(X)).cpu().detach()
+        return predicted_label
     def predict_cnn(self, X):
         # seq_len, dataset_len,input_size
         X = np.asarray(X)

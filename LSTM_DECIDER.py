@@ -50,10 +50,8 @@ class LSTM_DECIDER(Model):
         self.experiment = Experiment(config=self.config, model=self.model_lstm, dataset=data)
         self.experiment.run()
         #print("Predicted:",self.experiment.predict_lstm(classDatas[100:self.config.SEQ_LEN+100],self.config.INPUT_SIZE))
-    def predict(self):
-        classDatas = self.dataToClassFunc(np.asarray(self.dataMemory[-self.config.SEQ_LEN:]),self.thresholding)
-        print(classDatas)
-        return np.asarray(self.experiment.predict_lstm(classDatas,self.config.INPUT_SIZE))[0]
+    def predict(self,dataX):
+        return np.asarray(self.experiment.predict_lstm_decider(dataX[-self.config.SEQ_LEN:],5))[0]
     # The method provide to send to message from self to another agent
     def dataToClassFunc(self, data, thresholding):
         result = np.zeros(data.shape[0])
@@ -76,8 +74,9 @@ class LSTM_DECIDER(Model):
         print("self.agentsBeheviours",self.agentsBeheviours)
         self.dataX.append(self.agentsBeheviours)
 
-        if (len(self.dataMemory) == 200):
+        if (len(self.dataMemory) == 150):
             self.train(np.asarray(self.dataX), classData)
-
-
+        if len(self.dataMemory) > 150:
+            self.behaviourState = self.predict(np.asarray(self.dataX))
+        print("lstm_decider",self.behaviourState)
 

@@ -225,7 +225,7 @@ class CNN1DOnlineDataSet(GenericDataset):
 
 class OnlineDeciderDataSet(GenericDataset):
     def __init__(self,raw_dataset_x,raw_dataset_y,seq_len=10):
-        train_valid_ration = 0.99
+        train_valid_ration = 0.70
 
         train_len = int(raw_dataset_x.shape[0] * train_valid_ration)
 
@@ -233,34 +233,41 @@ class OnlineDeciderDataSet(GenericDataset):
         self.raw_dataset_x_validation = raw_dataset_x[train_len:]
         self.raw_dataset_y_training = raw_dataset_y[10:train_len]
         self.raw_dataset_y_validation = raw_dataset_y[train_len:]
+        print("raw_dataset_x_training",self.raw_dataset_x_training.shape)
+        print("raw_dataset_y_training",self.raw_dataset_y_training.shape)
+        print("raw_dataset_x_validation",self.raw_dataset_x_validation.shape)
+        print("raw_dataset_y_validation", self.raw_dataset_y_validation.shape)
 
         self.train_dataset = self.Inner(self.raw_dataset_x_training, self.raw_dataset_y_training, seq_len)
         self.valid_dataset = self.Inner(self.raw_dataset_x_validation, self.raw_dataset_y_validation, seq_len)
 
-        class Inner(torch.utils.data.Dataset, GenericDataset):
-            def __init__(self, datasetX, datasetY, seq_len):
-                X = []
-                y = []
-                for i in range(datasetX.shape[0] - seq_len):
-                    X.append(datasetX[i:i + seq_len])
-                    y.append(datasetY[i + seq_len])
-                X = np.asarray(X)
-                y = np.asarray(y)
-                # seq_len, dataset_len,input_size
-                X = to_categorical(X, 3)
-                X = X.reshape(X.shape[0], X.shape[1], X.shape[2] * X.shape[3])
-                X = X.transpose([1, 0, 2])
+    class Inner(torch.utils.data.Dataset, GenericDataset):
+        def __init__(self, datasetX, datasetY, seq_len):
+            X = []
+            y = []
+            for i in range(datasetX.shape[0] - seq_len):
+                X.append(datasetX[i:i + seq_len])
+                y.append(datasetY[i + seq_len])
+            X = np.asarray(X)
+            y = np.asarray(y)
 
-                # print(np.array(X).shape)
-                y = y.T
-                self.data = torch.FloatTensor(X)
-                self.labels = torch.LongTensor(y)
+            # seq_len, dataset_len,input_size
+            X = to_categorical(X, 5)
+            print("X.shape", X.shape)
+            X = X.reshape(X.shape[0],X.shape[1], X.shape[2] * X.shape[3])
+            print("X.shape", X.shape)
+            X = X.transpose([1, 0, 2])
+            # print(np.array(X).shape)
+            y = y.T
+            self.data = torch.FloatTensor(X)
+            self.labels = torch.LongTensor(y)
 
-            def __len__(self):
-                return self.data.shape[1]
+        def __len__(self):
+            return self.data.shape[1]
 
-            def __getitem__(self, ix):
-                return self.data[:, ix, :], self.labels[ix]
+        def __getitem__(self, ix):
+            return self.data[:, ix, :], self.labels[ix]
+
 
 class CNN1DDataSet(GenericDataset):
 

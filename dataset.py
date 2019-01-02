@@ -178,7 +178,7 @@ class BehaviourState:
 class CNN1DOnlineDataSet(GenericDataset):
 
     def __init__(self,raw_dataset = [],seq_len=10):
-        train_valid_ration = 0.90
+        train_valid_ration = 0.7
 
         #print(raw_dataset)
         train_len = int(raw_dataset.shape[0] * train_valid_ration)
@@ -229,9 +229,9 @@ class OnlineDeciderDataSet(GenericDataset):
 
         train_len = int(raw_dataset_x.shape[0] * train_valid_ration)
 
-        self.raw_dataset_x_training = raw_dataset_x[10:train_len]
+        self.raw_dataset_x_training = raw_dataset_x[10:]
         self.raw_dataset_x_validation = raw_dataset_x[train_len:]
-        self.raw_dataset_y_training = raw_dataset_y[10:train_len]
+        self.raw_dataset_y_training = raw_dataset_y[10:]
         self.raw_dataset_y_validation = raw_dataset_y[train_len:]
         print("raw_dataset_x_training",self.raw_dataset_x_training.shape)
         print("raw_dataset_y_training",self.raw_dataset_y_training.shape)
@@ -250,12 +250,9 @@ class OnlineDeciderDataSet(GenericDataset):
                 y.append(datasetY[i + seq_len])
             X = np.asarray(X)
             y = np.asarray(y)
-            print("X.shape", X.shape)
             # seq_len, dataset_len,input_size
             X = to_categorical(X, 5)
-            print("X.shape", X.shape)
             X = X.reshape(X.shape[0],X.shape[1], X.shape[2] * X.shape[3])
-            print("X.shape", X.shape)
             X = X.transpose([1, 0, 2])
             # print(np.array(X).shape)
             y = y.T

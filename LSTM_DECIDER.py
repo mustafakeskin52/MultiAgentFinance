@@ -21,7 +21,8 @@ class LSTM_DECIDER(Model):
     experiment = None
     trainLength = None
     thresholding = None
-
+    startPointOfTraining = 300
+    periodOfTraining = 50
     def on_init_properity(self, trainLength, thresholding):
         self.trainLength = trainLength
         self.thresholding = thresholding
@@ -74,9 +75,9 @@ class LSTM_DECIDER(Model):
         print("self.agentsBeheviours",self.agentsBeheviours)
         self.dataX.append(self.agentsBeheviours)
 
-        if (len(self.dataMemory) == 150):
+        if (len(self.dataMemory) >= self.startPointOfTraining and len(self.dataMemory) % self.periodOfTraining == 0):
             self.train(np.asarray(self.dataX), classData)
-        if len(self.dataMemory) > 150:
+        if len(self.dataMemory) > self.startPointOfTraining:
             self.behaviourState = self.predict(np.asarray(self.dataX))
         print("lstm_decider",self.behaviourState)
 

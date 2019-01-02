@@ -26,6 +26,7 @@ class LSTM_PREDICTOR(Model):
     thresholding = []
     config = config.ConfigLSTM()
     experiment = None
+
     def on_init_properity(self,trainLength,thresholding):
         self.trainLength = trainLength
         self.thresholding = thresholding

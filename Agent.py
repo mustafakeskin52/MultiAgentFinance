@@ -6,6 +6,8 @@ import model
 import dataset
 from LSTM_PREDICTOR import LSTM_PREDICTOR
 import HelperFunctions as hp
+import scipy.signal as signal
+import matplotlib.pyplot as plt
 import numpy as np
 from Server import Server
 from LSTM_DECIDER import LSTM_DECIDER
@@ -33,21 +35,42 @@ class BehaviourState:
     NONE = 2
     SELL = 1
     LOW_SELL = 0
-
+def downSampling(signal,periodicDownSampling):
+    samplingSignal = []
+    for i,d in enumerate(signal):
+        if i%periodicDownSampling == 0:
+            samplingSignal.append(d)
+    return np.asarray(samplingSignal)
 def initialize_agent():
-    data = pd.DataFrame(data = np.add(hp.sinData(1000,10), hp.cosData(1000,50)))#np.add(hp.sinData(1000,30), hp.sinData(1000,50)) #np.asarray(hp.sinData(1000,30))#hp.sinData(1000,30)#np.add(hp.sinData(1000,30), hp.sinData(1000,50))
-    s = data.iloc[0:900]
-    #s = pd.Series(hp.readDataFromCSV("AMD.CSV")[6000:9000])
-    trainingdata = np.asarray(s.pct_change())[1:] * 100
+    trainingRate = 0.7
+    #data = pd.DataFrame(data = np.add(hp.sinData(3000,10), hp.cosData(3000,50)))#np.add(hp.sinData(1000,30), hp.sinData(1000,50)) #np.asarray(hp.sinData(1000,30))#hp.sinData(1000,30)#np.add(hp.sinData(1000,30), hp.sinData(1000,50))
+    #s = data.iloc[0:1000]
+    downSamplingSignal = downSampling(hp.readDataFromCSV("AMD.CSV")[0:],1)
+    s = pd.Series(downSamplingSignal)
+    N = 2  # Filter order
+    fs = 1/24
+    fc = 30
+    Wn = fc/ (fs / 2) # Cutoff frequency
+    Wn = 0.10
+    B, A = signal.butter(N, Wn, output='ba')
+    w, h = signal.freqs(B, A)
+
+    #Before this code comed to this block ,the signal was passing to a low pass filter
+    s = pd.DataFrame(data = signal.filtfilt(B, A, s))
+    plt.plot(s)
+    plt.show()
+    percentageData = np.asarray(s.pct_change())[1:] * 100
+    trainingLength = int(percentageData.shape[0]*trainingRate)
+    trainingdata = percentageData[:trainingLength]
     thresholdingVector = hp.findOptimalThresholds(trainingdata, 5)
     #trainingdata = trainingdata.squeeze(axis=1)
 
     """
         
     """
-    #s = pd.Series(hp.readDataFromCSV("AMD.CSV")[8900:9000])
-    s = data[500:1000]
-    testdata = np.asarray(s.pct_change())[1:] * 100
+    #s = pd.Series(hp.readDataFromCSV("AMD.CSV")[9000:9400])
+    #s = data[1000:3000]
+    testdata = percentageData[trainingLength:]
     #testdata = testdata.squeeze(axis=1)
     # Setting evaluater thresholding vector table so that class loss error will be calculated by the evaluater
     model1 = run_agent('Model1', base=LinearRegAgent)
@@ -89,6 +112,7 @@ def initialize_agent():
     modelsList.append(imitator)
     modelsList.append(majorityDecider)
     modelsList.append(lstm_decider)
+
     return modelsList,testdata
 if __name__ == '__main__':
     modelsList = []
@@ -99,13 +123,6 @@ if __name__ == '__main__':
     config = config.ConfigLSTM()
 
     modelsList, data = initialize_agent()
-    #config.save()
-    #dataset = dataset.OnlineLearningFinancialData(seq_len=config.SEQ_LEN,data = classDatas,categoricalN=5)
-    #model = model.LSTM(input_size=config.INPUT_SIZE, seq_length=config.SEQ_LEN, num_layers=2,
-    #                  out_size=config.OUTPUT_SIZE, hidden_size=5, batch_size=config.TRAIN_BATCH_SIZE,
-    #                   device=config.DEVICE)
-    #experiment = Experiment(config=config, model=model, dataset=dataset)
-    #experiment.run()
 
     hp.initialConnectionsAgent(modelsList,server)
     # Send messages

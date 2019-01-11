@@ -19,7 +19,7 @@ class EvaluatorAgent(Model):
     diffRealBehaviourValue = []
     overallscoreAgents = {}
     periodicScoreTableAgents = {}
-    periodOfData = 10
+    periodOfData = 500
     scoreOfTheLastBehaviours = {}
     thresholdArray = []
     startPointScoresCalc = 400

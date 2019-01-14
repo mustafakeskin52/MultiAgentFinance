@@ -35,10 +35,6 @@ class LSTM_PREDICTOR(Model):
             self.log_info('ReceivedFromAgent: %s' % receivingObjectFromAgent.senderId)
             self.log_info('ReceivedFromAgent: %s' % receivingObjectFromAgent.message)
 
-    def receive_server_broadcast_message(self, receivingObjectFromServer):
-        self.log_info('ReceivedFromServer: %s' % receivingObjectFromServer.message[0])
-        self.dataMemory.append(receivingObjectFromServer.message[0])
-        self.dataTime.append(receivingObjectFromServer.message[1])
 
     def loadALLVariables(self, pathOfImitatorObject):
         data = np.load(pathOfImitatorObject)

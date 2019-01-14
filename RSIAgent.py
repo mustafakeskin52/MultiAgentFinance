@@ -10,18 +10,12 @@ class BehaviourState:
     LOW_SELL = 0
 
 #A model might extend to class that is a abstract agent model including basic layouts
-class LinearRegAgent(Model):
-    lastN = 0
-    thresholding = []
+class RSIAgent(Model):
 
-    def on_init_properity(self,lastN,thresholding):
-        self.lastN = lastN
-        self.thresholding = thresholding
     def receive_agent_message(self,receivingObjectFromAgent):
         if receivingObjectFromAgent != None:
             self.log_info('ReceivedFromAgent: %s' % receivingObjectFromAgent.senderId)
             self.log_info('ReceivedFromAgent: %s' % receivingObjectFromAgent.message)
-
 
     def loadALLVariables(self, pathOfImitatorObject):
         data = np.load(pathOfImitatorObject)
@@ -33,23 +27,34 @@ class LinearRegAgent(Model):
                  dataTime=self.dataTime)
     # The method provide to send to message from self to another agent
     def evaluate_behaviour(self):
-        t = self.dataTime[-1]+1
-        time = np.arange(t - self.lastN, t, 1)
-        time = time.reshape(-1, 1)
-
-        if len(self.dataMemory) >= self.lastN:
+        periodLength = 15
+        signal = np.squeeze(np.asarray(self.signalMemory),axis = 1)
+        if len(signal) >= periodLength:
             #print(t)
-            regr = linear_model.LinearRegression()
-            regr.fit(time,self.dataMemory[t - self.lastN:t])
-            predictionValue = regr.predict(t)
+            print("signal:",signal[-periodLength:])
+            diff = np.diff(signal[-periodLength:])
 
-            if predictionValue > self.thresholding[0]:
+            print("diff:",diff)
+            upValues = [i for i in diff if i >= 0]
+
+            print("upValues:",upValues)
+            downValues = [i for i in diff if i < 0]
+            downValues = np.abs(downValues)
+
+            print("downValues:",downValues)
+            AvgU = np.sum(upValues)/periodLength
+            AvgD = np.sum(downValues)/periodLength
+
+            Rs = AvgU/AvgD
+            RSI = 100 - 100/(1 + Rs)
+            print("RSI",RSI)
+            if RSI > 65:
                 self.behaviourState = BehaviourState.HIGH_BUY
-            elif predictionValue > self.thresholding[1]:
+            elif RSI > 55:
                 self.behaviourState = BehaviourState.BUY
-            elif predictionValue > self.thresholding[2]:
+            elif RSI > 45:
                 self.behaviourState = BehaviourState.NONE
-            elif predictionValue > self.thresholding[3]:
+            elif RSI > 35:
                 self.behaviourState = BehaviourState.SELL
             else:
                 self.behaviourState = BehaviourState.LOW_SELL

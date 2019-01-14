@@ -126,15 +126,16 @@ class EvaluatorAgent(Model):
     def receive_server_broadcast_message(self, receivingObjectFromServer):
         self.log_info('ReceivedFromServer: %s' % receivingObjectFromServer.message[0])
         temp = 0
-        if receivingObjectFromServer.message[0] > self.thresholdArray[0]:
-            temp = BehaviourState.HIGH_BUY
-        elif receivingObjectFromServer.message[0] > self.thresholdArray[1]:
-            temp = BehaviourState.BUY
-        elif receivingObjectFromServer.message[0] > self.thresholdArray[2]:
-            temp = BehaviourState.NONE
-        elif receivingObjectFromServer.message[0] > self.thresholdArray[3]:
-            temp = BehaviourState.SELL
-        else:
-            temp = BehaviourState.LOW_SELL
+        if receivingObjectFromServer.message[0] != None:
+            if receivingObjectFromServer.message[0] > self.thresholdArray[0]:
+                temp = BehaviourState.HIGH_BUY
+            elif receivingObjectFromServer.message[0] > self.thresholdArray[1]:
+                temp = BehaviourState.BUY
+            elif receivingObjectFromServer.message[0] > self.thresholdArray[2]:
+                temp = BehaviourState.NONE
+            elif receivingObjectFromServer.message[0] > self.thresholdArray[3]:
+                temp = BehaviourState.SELL
+            else:
+                temp = BehaviourState.LOW_SELL
         self.dataTime.append(receivingObjectFromServer.message[1])
         self.dataClassMemory.append(temp)

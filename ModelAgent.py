@@ -10,6 +10,7 @@ class Model(Agent):
 
     uniqueId = ""
     dataMemory = []
+    signalMemory = []
     dataClassMemory = []
     dataTime = []
     behaviourState = 0
@@ -32,9 +33,10 @@ class Model(Agent):
             self.log_info('ReceivedFromAgent: %s' % receivingObjectFromAgent.message)
 
     def receive_server_broadcast_message(self, receivingObjectFromServer):
-        self.log_info('ReceivedFromServer: %s' % receivingObjectFromServer.message[0])
+        self.log_info('ReceivedFromServer: %s' % receivingObjectFromServer.message[2])
         self.dataMemory.append(receivingObjectFromServer.message[0])
-
+        self.dataTime.append(receivingObjectFromServer.message[1])
+        self.signalMemory.append(receivingObjectFromServer.message[2])
     def sending_message(self,sendingObject):
        if sendingObject != None:
             sendingObjectC = MessageType()

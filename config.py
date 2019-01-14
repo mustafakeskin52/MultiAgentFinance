@@ -45,7 +45,7 @@ class ConfigLSTM(GenericConfig):
 
         self.DATASET_NAME = 'ToyDatalet'
         # Experiment params
-        self.EPOCH_SIZE = 100
+        self.EPOCH_SIZE = 5
         self.EXPERIMENT_DIR = '../experiment/{}/{}'.format(self.DATASET_NAME, str(int(time.time())))
 
         # Dataloader params
@@ -74,7 +74,7 @@ class ConfigLSTMForDecider(GenericConfig):
         self.VALID_BATCH_SIZE = 50
 
         # Model params
-        self.INPUT_SIZE = 20
+        self.INPUT_SIZE = 30
         self.OUTPUT_SIZE = 5
         self.SEQ_LEN = 25
 class ConfigCNN(GenericConfig):

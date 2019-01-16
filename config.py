@@ -58,6 +58,18 @@ class ConfigLSTM(GenericConfig):
         self.INPUT_SIZE = 5
         self.OUTPUT_SIZE = 5
         self.SEQ_LEN = 15
+class ConfigMLP(GenericConfig):
+    def __init__(self):
+        GenericConfig.__init__(self)
+        self.EPOCH_SIZE = 300
+        # Dataloader params
+        self.TRAIN_SHUFFLE = False
+        self.VALID_SHUFFLE = False
+        self.TRAIN_BATCH_SIZE = 30
+        self.VALID_BATCH_SIZE = 30
+        # Model params
+        self.INPUT_SIZE = 5
+        self.OUTPUT_SIZE = 1
 class ConfigLSTMForDecider(GenericConfig):
     def __init__(self):
         GenericConfig.__init__(self)

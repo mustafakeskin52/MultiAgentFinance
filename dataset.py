@@ -221,7 +221,56 @@ class CNN1DOnlineDataSet(GenericDataset):
 
         def __getitem__(self, ix):
             return self.data[ix,:], self.labels[ix]
+class MLPOnlineDataset(GenericDataset):
+    def __init__(self,dataX = [],dataY = []):
+        train_valid_ration = 0.70
+        train_len = int(dataX.shape[0] * train_valid_ration)
 
+        self.data_x_training = dataX[0:train_len]
+        self.data_x_validation = dataX[train_len:]
+        self.data_y_training = dataY[0:train_len]
+        self.data_y_validation = dataY[train_len:]
+
+        self.train_dataset = self.Inner(self.data_x_training, self.data_y_training)
+        self.valid_dataset = self.Inner(self.data_x_validation, self.data_y_validation)
+
+    class Inner(torch.utils.data.Dataset, GenericDataset):
+        def __init__(self, datasetX, datasetY):
+
+            # dataset_len,input_size
+            self.data = torch.FloatTensor(datasetX)
+            self.labels = torch.LongTensor(datasetY)
+
+        def __len__(self):
+            return self.data.shape[0]
+
+        def __getitem__(self, ix):
+            return self.data[ix,:], self.labels[ix]
+class MLPToyDataset(GenericDataset):
+    def __init__(self,dataX = [],dataY = []):
+        train_valid_ration = 0.70
+        train_len = int(dataX.shape[0] * train_valid_ration)
+
+        self.data_x_training = dataX[0:train_len]
+        self.data_x_validation = dataX[train_len:]
+        self.data_y_training = dataY[0:train_len]
+        self.data_y_validation = dataY[train_len:]
+
+        self.train_dataset = self.Inner(self.data_x_training, self.data_y_training)
+        self.valid_dataset = self.Inner(self.data_x_validation, self.data_y_validation)
+
+    class Inner(torch.utils.data.Dataset, GenericDataset):
+        def __init__(self, datasetX, datasetY):
+
+            # dataset_len,input_size
+            self.data = torch.FloatTensor(datasetX)
+            self.labels = torch.LongTensor(datasetY)
+
+        def __len__(self):
+            return self.data.shape[0]
+
+        def __getitem__(self, ix):
+            return self.data[ix,:], self.labels[ix]
 
 class OnlineDeciderDataSet(GenericDataset):
     def __init__(self,raw_dataset_x,raw_dataset_y,seq_len=10):
@@ -264,7 +313,6 @@ class OnlineDeciderDataSet(GenericDataset):
 
         def __getitem__(self, ix):
             return self.data[:, ix, :], self.labels[ix]
-
 
 class CNN1DDataSet(GenericDataset):
 

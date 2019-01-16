@@ -5,6 +5,7 @@ import pickle
 import model
 import dataset
 from LSTM_PREDICTOR import LSTM_PREDICTOR
+from MLPDecider import MLPDecider
 from RSIAgent import RSIAgent
 from CopyYesterdayAgent import CopyYesterdayAgent
 import HelperFunctions as hp
@@ -85,10 +86,12 @@ def initialize_agent():
     lstm_decider =run_agent('LSTM_DECIDER',base=LSTM_DECIDER)
     imitator = run_agent('Imitator', base=ImitatorAgent)
     majorityDecider = run_agent('MajorityDecider', base=MajorityDecider)
+    mlpDecider = run_agent('MLPDecider',base=MLPDecider)
     arimaAgent = run_agent('ARIMAAgent', base=ARIMAAgent)
     rsiAgent = run_agent('RSIAgent',base = RSIAgent)
     model1.uniqueId = "model1"
     model3.uniqueId = "model3"
+    mlpDecider.uniqueId = "mlpDecider"
     copyYesterdayAgent.uniqueId = "copyYesterdayAgent"
     #cnn_agent.uniqueId = "cnn_agent"
     arimaAgent.uniqueId = "arima"
@@ -107,7 +110,7 @@ def initialize_agent():
     arimaAgent.on_init_properity(5,thresholdingVector)
     evaluate_agent.on_init_properity(thresholdingVector)
     lstm_decider.on_init_properity(3,thresholdingVector)
-
+    mlpDecider.on_init_properity(3,thresholdingVector)
     #cnn_agent.train(trainingdata)
     lstm_agent.train(trainingData)
 
@@ -119,6 +122,7 @@ def initialize_agent():
     #modelsList.append(cnn_agent)
     modelsList.append(evaluate_agent)
     modelsList.append(imitator)
+    modelsList.append(mlpDecider)
     modelsList.append(majorityDecider)
     modelsList.append(lstm_decider)
 
@@ -128,8 +132,6 @@ if __name__ == '__main__':
     filePath = "globalsave"
     ns = run_nameserver()
     server = run_agent('Server', base=Server)
-
-    config = config.ConfigLSTM()
 
     financeData,modelsList, data = initialize_agent()
 
@@ -141,6 +143,7 @@ if __name__ == '__main__':
     agentlist = hp.getAgentList(modelsList)#all agent names have been stored in this list
 
     lstmdeciderLog = []
+    mlpdeciderLog = []
     majorityVotingLog = []
     print(np.squeeze(financeData,axis=1))
 
@@ -172,7 +175,7 @@ if __name__ == '__main__':
             In this part of the agent.py code main loop after evaluater collects behaviours of the agents ,they decided to broadcast it to imitator.
             Therefore,at the first part of the code might be sended to a empty behaviours to the agents  
         """
-        sendingObjectList = {"model1": None,"lstm_agent": None,"arima":None,"copyYesterdayAgent":None,"rsiAgent":None,"evaluater": None, "imitator": m1,"majorityDecider":None,"lstm_decider":None}
+        sendingObjectList = {"model1": None,"lstm_agent": None,"arima":None,"copyYesterdayAgent":None,"rsiAgent":None,"evaluater": None, "imitator": m1,"mlpDecider":None,"majorityDecider":None,"lstm_decider":None}
         m1.message = modelsList[5].getLastBehavioursAgents()
         # # print("list",m1.message)
         m1.senderId = "evaluater"
@@ -190,7 +193,7 @@ if __name__ == '__main__':
             All decisions is sending to evaluater before running majoritydecider or any decider agent.
         """
         sendingObjectList = {"model1": None,"lstm_agent": None,"arima":None,"copyYesterdayAgent":None,"rsiAgent":None,"evaluater": m1,
-                             "imitator": None, "majorityDecider": None,"lstm_decider":None}
+                             "imitator": None,"mlpDecider":None, "majorityDecider": None,"lstm_decider":None}
         for j in range(0,5,1):
             m1.message = modelsList[j].get_behaviourstate()
             m1.senderId = modelsList[j].uniqueId
@@ -201,7 +204,7 @@ if __name__ == '__main__':
             Evaluator is sending their datas to majoritydecider to take a greater score than all agents behaviours 
         """
         sendingObjectList = {"model1": None,"lstm_agent": None,"arima":None,"copyYesterdayAgent":None,"rsiAgent":None,"evaluater": None, "imitator": None,
-                             "majorityDecider": m1,"lstm_decider":m1}
+                             "mlpDecider":m1,"majorityDecider": m1,"lstm_decider":m1}
         m1.message = majorityDeciderFeedBack
         m1.senderId = "evaluater"
         hp.communicateALLAgents(modelsList, m1.senderId, sendingObjectList)
@@ -210,12 +213,13 @@ if __name__ == '__main__':
         #This priority is more important than some priority that is located in this while loop
         modelsList[-1].evaluate_behaviour()
         modelsList[-2].evaluate_behaviour()
+        modelsList[-3].evaluate_behaviour()
         """
-            After majoritydecider published its decision,it is sending majority decider discrete from all general agents
+            After majoritydecider published its decision,it is sending to majority decider by a  discrete from all general agents
             The purpose of  the majority decider algoritms must obtain a greater score than all agents.Hence,evaluater agents will be 
             argumentative. 
         """
-        sendingObjectList = {"model1": None,"lstm_agent": None,"arima":None,"copyYesterdayAgent":None,"rsiAgent":None,"evaluater": m1, "imitator": None,
+        sendingObjectList = {"model1": None,"lstm_agent": None,"arima":None,"copyYesterdayAgent":None,"rsiAgent":None,"evaluater": m1, "imitator": None,"mlpDecider":None,
                              "majorityDecider": None,"lstm_decider":None}
 
         m1.message = modelsList[-1].get_behaviourstate()
@@ -227,11 +231,16 @@ if __name__ == '__main__':
         m1.senderId = modelsList[-2].uniqueId
         m1.messageType = "behaviourOfAgentNow"
         hp.communicateALLAgents(modelsList, m1.senderId, sendingObjectList)
+
+        m1.message = modelsList[-3].get_behaviourstate()
+        m1.senderId = modelsList[-3].uniqueId
+        m1.messageType = "behaviourOfAgentNow"
+        hp.communicateALLAgents(modelsList, m1.senderId, sendingObjectList)
         """
             Imitator object might be considered as a lstm that try to improve all agents performences.
             The differences between imitator and decider agents is that lstm might be more successful than classical decider according to our plan
         """
-        sendingObjectList = {"model1": None,"lstm_agent": None,"arima":None,"copyYesterdayAgent":None,"rsiAgent":None,"evaluater": None, "imitator": m1,"majorityDecider": None,"lstm_decider":None}
+        sendingObjectList = {"model1": None,"lstm_agent": None,"arima":None,"copyYesterdayAgent":None,"rsiAgent":None,"evaluater": None, "imitator": m1,"mlpDecider":None,"majorityDecider": None,"lstm_decider":None}
         m1.message = modelsList[5].getAgentLastPredictionList()
         # print("list",m1.message)
         m1.senderId = "evaluater"
@@ -244,10 +253,12 @@ if __name__ == '__main__':
         if modelsList[5].getPeriodicScoreTableAgents() != {}:
             lstmdeciderLog.append(modelsList[5].getPeriodicScoreTableAgents()["lstm_decider"])
             majorityVotingLog.append(modelsList[5].getPeriodicScoreTableAgents()["majorityDecider"])
+            mlpdeciderLog.append(modelsList[5].getPeriodicScoreTableAgents()["mlpDecider"])
         #print("PeriodicDatas",modelsList[3].getPeriodicScoreTableAgents())
     #hp.saveDatas(modelsList, filePath)
     plt.plot(lstmdeciderLog,'r',label='LstmDecider')  # plotting t, a separately
     plt.plot(majorityVotingLog,'b',label='majorityVoting')  # plotting t, b separately
+    plt.plot(mlpdeciderLog, 'y', label='mlpDecider')  # plotting t, b separately
     plt.legend()
     plt.show()
 

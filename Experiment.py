@@ -75,7 +75,7 @@ class Experiment:
         #MODEL = class_by_name(self.config.MODEL_NAME)  # CNN, LSTM
         #self.model = MODEL(config=self.config).to(self.config.DEVICE)
 
-        self.writer = SummaryWriter(log_dir=os.path.join(self.config.EXPERIMENT_DIR, 'summary'))
+        #self.writer = SummaryWriter(log_dir=os.path.join(self.config.EXPERIMENT_DIR, 'summary'))
 
     def save(self):
         self.config.save()
@@ -86,6 +86,10 @@ class Experiment:
         X = convert_to_categorical(X, categoricalN)
         X = np.expand_dims(X,axis=0)
 
+        predicted_label = self.model.predict(torch.FloatTensor(X)).cpu().detach()
+        return predicted_label
+    def predict_mlp_decider(self,X):
+        X = np.asarray(X)
         predicted_label = self.model.predict(torch.FloatTensor(X)).cpu().detach()
         return predicted_label
     def predict_lstm_decider(self,X,categoricalN):
@@ -146,8 +150,8 @@ class Experiment:
         print("========================================")
 
         # Write losses to the tensorboard
-        self.writer.add_scalar('training_loss', training_loss, epoch)
-        self.writer.add_scalar('validation_loss', validation_loss, epoch)
+        #self.writer.add_scalar('training_loss', training_loss, epoch)
+        #self.writer.add_scalar('validation_loss', validation_loss, epoch)
 
         # # Write random image to the summary writer.
         # image_grid = torchvision.utils.make_grid(X_sample, normalize=True, scale_each=True)
@@ -157,7 +161,7 @@ class Experiment:
 
 
         # Write PR Curve to the summary writer.
-        self.writer.add_pr_curve('xoxo', np.random.randint(2, size=100), np.random.rand(100), epoch)
+        #self.writer.add_pr_curve('xoxo', np.random.randint(2, size=100), np.random.rand(100), epoch)
 
         # for name, param in model.named_parameters():
         #     print(name)
@@ -180,4 +184,4 @@ class Experiment:
                 pbar.set_description("{}||||{}".format(tloss, vloss))
                 pbar.update(1)
 
-        self.writer.export_scalars_to_json(self.config.EXPERIMENT_DIR+'.json')
+        #self.writer.export_scalars_to_json(self.config.EXPERIMENT_DIR+'.json')

@@ -197,10 +197,13 @@ class GenericModel(nn.Module):
 
             # xs = xs.to(self.device) # todo: do it in dataset class
 
+            #print("outputs", self.labels.shape)
             # forward
             outputs = self.forward(X)
+            #time.sleep(1000)
             # loss
             loss = self.criterion(outputs, y)
+
 
             self.current_loss = loss
 
@@ -230,7 +233,6 @@ class GenericModel(nn.Module):
     def score(self, X, y):
         # score(X, y[, sample_weight])	Returns the mean accuracy on the given test data and labels.
         predicted = self.predict(X)
-
         correct = (predicted == y).sum().item()
         return correct/(y.size()[0])
 
@@ -452,16 +454,14 @@ class LSTM(GenericModel):
 class MLP(GenericModel):
 
 
-    def __init__(self, config):
+    def __init__(self,input_size,output_size):
         GenericModel.__init__(self)
 
-        self.device = config.DEVICE
-
-        self.fc1 = nn.Linear(in_features=28*28, out_features=100)
-        self.fc2 = nn.Linear(in_features=100, out_features=10)
+        self.fc1 = nn.Linear(in_features=input_size, out_features=10)
+        self.fc2 = nn.Linear(in_features=10, out_features=output_size)
 
         self.optimizer = optim.Adam(self.parameters(), lr=0.001)
-        self.criterion = nn.CrossEntropyLoss()
+        self.criterion = nn.NLLLoss()
 
     def forward(self, x):
 
@@ -471,15 +471,11 @@ class MLP(GenericModel):
 
         return F.log_softmax(out, dim=1)
 
+    def init_hidden(self):
+        return None
+
     def dummy_input(self):
         pass
-
-
-
-
-
-
-
 
 if __name__ == "__main__":
     pass

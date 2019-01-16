@@ -32,24 +32,36 @@ if __name__ == "__main__":
     4. Pass config to experiment
     5. Run
     """
-    config = config.ConfigCNN()
+    config = config.ConfigMLP()
     #
     #dataset = dataset.CNN1DDataSet(seq_len=20)
     #dataset = dataset.MNISTDataset(config)
 
     #config = config.ConfigLSTM()
-    # dataset = dataset.SequenceLearningOneToOne()
+    #dataset = dataset.SequenceLearningOneToOne()
     # model = model.LSTM(input_size=10, seq_length=1, num_layers=1,
     #                    out_size=10, hidden_size=10, batch_size=1, device=config.DEVICE)
-    config.save()
-    dataset = dataset.FinancialDataSet(seq_len=10)
-    # model = model.LSTM(input_size=config.INPUT_SIZE, seq_length=config.SEQ_LEN, num_layers=2,
-    #                       out_size=config.OUTPUT_SIZE, hidden_size=5, batch_size=config.TRAIN_BATCH_SIZE,
-    #                       device=config.DEVICE)
+    dataX = [[(i%4)/4,(i%4)/4.0] for i in range(0,1000)]
+    dataY = []
+    for i in range(len(dataX)):
+        if i%4 == 3:
+            dataY.append(0)
+        elif i%4 == 2:
+            dataY.append(1)
+        elif i%4 == 1:
+            dataY.append(2)
+        else :
+            dataY.append(3)
+    print(np.asarray(dataX))
+    print(np.asarray(dataY))
+    dataset = dataset.MLPToyDataset(dataX = np.asarray(dataX),dataY = np.asarray(dataY))
+    #model = model.LSTM(input_size=config.INPUT_SIZE, seq_length=config.SEQ_LEN, num_layers=2,
+     #                      out_size=config.OUTPUT_SIZE, hidden_size=5, batch_size=config.TRAIN_BATCH_SIZE,
+     #                      device=config.DEVICE)
     #
-    model = model.CNN(config)
+    model = model.MLP(input_size=2,output_size=4)
     #
 
-    #experiment = Experiment(config=config, model=model, dataset=dataset)
-    #experiment.run()
+    experiment = Experiment(config=config, model=model, dataset=dataset)
+    experiment.run()
 

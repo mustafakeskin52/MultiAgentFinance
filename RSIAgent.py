@@ -30,24 +30,17 @@ class RSIAgent(Model):
         periodLength = 15
         signal = np.squeeze(np.asarray(self.signalMemory),axis = 1)
         if len(signal) >= periodLength:
-            #print(t)
-            print("signal:",signal[-periodLength:])
+
             diff = np.diff(signal[-periodLength:])
-
-            print("diff:",diff)
             upValues = [i for i in diff if i >= 0]
-
-            print("upValues:",upValues)
             downValues = [i for i in diff if i < 0]
             downValues = np.abs(downValues)
 
-            print("downValues:",downValues)
             AvgU = np.sum(upValues)/periodLength
             AvgD = np.sum(downValues)/periodLength
 
             Rs = AvgU/AvgD
             RSI = 100 - 100/(1 + Rs)
-            print("RSI",RSI)
             if RSI > 65:
                 self.behaviourState = BehaviourState.HIGH_BUY
             elif RSI > 55:

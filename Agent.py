@@ -20,6 +20,7 @@ import mnist_main
 from torch.utils.data import DataLoader
 from tensorboardX import SummaryWriter
 from ARIMAAgent import ARIMAAgent
+from MLPAgent import MLPAgent
 from CNN_PREDICTOR import CNN_PREDICTOR
 from tqdm import trange, tqdm
 from MajorityDecider import MajorityDecider
@@ -52,7 +53,7 @@ def initialize_agent():
     s = pd.Series(downSamplingSignal)
     N = 2  # Filter order
 
-    Wn = 0.1
+    Wn = 0.3
     B, A = signal.butter(N, Wn, output='ba')
     w, h = signal.freqs(B, A)
 
@@ -88,9 +89,11 @@ def initialize_agent():
     majorityDecider = run_agent('MajorityDecider', base=MajorityDecider)
     mlpDecider = run_agent('MLPDecider',base=MLPDecider)
     arimaAgent = run_agent('ARIMAAgent', base=ARIMAAgent)
+    mlpAgent = run_agent('MLP_AGENT',base=MLPAgent)
     rsiAgent = run_agent('RSIAgent',base = RSIAgent)
     model1.uniqueId = "model1"
     model3.uniqueId = "model3"
+    mlpAgent.uniqueId = "mlpAgent"
     mlpDecider.uniqueId = "mlpDecider"
     copyYesterdayAgent.uniqueId = "copyYesterdayAgent"
     #cnn_agent.uniqueId = "cnn_agent"
@@ -103,6 +106,7 @@ def initialize_agent():
     lstm_decider.uniqueId = "lstm_decider"
 
     #cnn_agent.on_init_properity(3,thresholdingVector)
+    mlpAgent.on_init_properity(3,thresholdingVector)
     copyYesterdayAgent.on_init_properity(thresholdingVector)
     model1.on_init_properity(3,thresholdingVector)
     model3.on_init_properity(5,thresholdingVector)
@@ -113,12 +117,14 @@ def initialize_agent():
     mlpDecider.on_init_properity(3,thresholdingVector)
     #cnn_agent.train(trainingdata)
     lstm_agent.train(trainingData)
+    mlpAgent.train(trainingData)
 
     modelsList.append(model1)
     modelsList.append(lstm_agent)
     modelsList.append(arimaAgent)
     modelsList.append(copyYesterdayAgent)
     modelsList.append(rsiAgent)
+    modelsList.append(mlpAgent)
     #modelsList.append(cnn_agent)
     modelsList.append(evaluate_agent)
     modelsList.append(imitator)
@@ -168,15 +174,15 @@ if __name__ == '__main__':
                 *Before agents will publish to their behaviours,evaluator should calculate their scores and return to these scores as object to server
                 *The priority of the calculating scores can be important due to server priority that depended on agents based system 
         """
-        modelsList[5].update()
+        modelsList[6].update()
         print("time:",i)
         print("data:",d)
         """
             In this part of the agent.py code main loop after evaluater collects behaviours of the agents ,they decided to broadcast it to imitator.
             Therefore,at the first part of the code might be sended to a empty behaviours to the agents  
         """
-        sendingObjectList = {"model1": None,"lstm_agent": None,"arima":None,"copyYesterdayAgent":None,"rsiAgent":None,"evaluater": None, "imitator": m1,"mlpDecider":None,"majorityDecider":None,"lstm_decider":None}
-        m1.message = modelsList[5].getLastBehavioursAgents()
+        sendingObjectList = {"model1": None,"lstm_agent": None,"arima":None,"copyYesterdayAgent":None,"rsiAgent":None,"mlpAgent":None,"evaluater": None, "imitator": m1,"mlpDecider":None,"majorityDecider":None,"lstm_decider":None}
+        m1.message = modelsList[6].getLastBehavioursAgents()
         # # print("list",m1.message)
         m1.senderId = "evaluater"
         m1.messageType = "behaviourTruthLast"
@@ -186,15 +192,15 @@ if __name__ == '__main__':
             the for each loop range will be increased or changed.
             After passing this block,all the agents can explain their behaviours to server. 
         """
-        for j in range(0,5,1):
+        for j in range(0,6,1):
             modelsList[j].evaluate_behaviour()
 
         """
             All decisions is sending to evaluater before running majoritydecider or any decider agent.
         """
-        sendingObjectList = {"model1": None,"lstm_agent": None,"arima":None,"copyYesterdayAgent":None,"rsiAgent":None,"evaluater": m1,
+        sendingObjectList = {"model1": None,"lstm_agent": None,"arima":None,"copyYesterdayAgent":None,"rsiAgent":None,"mlpAgent":None,"evaluater": m1,
                              "imitator": None,"mlpDecider":None, "majorityDecider": None,"lstm_decider":None}
-        for j in range(0,5,1):
+        for j in range(0,6,1):
             m1.message = modelsList[j].get_behaviourstate()
             m1.senderId = modelsList[j].uniqueId
             m1.messageType = "behaviourOfAgentNow"
@@ -203,7 +209,7 @@ if __name__ == '__main__':
         """
             Evaluator is sending their datas to majoritydecider to take a greater score than all agents behaviours 
         """
-        sendingObjectList = {"model1": None,"lstm_agent": None,"arima":None,"copyYesterdayAgent":None,"rsiAgent":None,"evaluater": None, "imitator": None,
+        sendingObjectList = {"model1": None,"lstm_agent": None,"arima":None,"copyYesterdayAgent":None,"rsiAgent":None,"mlpAgent":None,"evaluater": None, "imitator": None,
                              "mlpDecider":m1,"majorityDecider": m1,"lstm_decider":m1}
         m1.message = majorityDeciderFeedBack
         m1.senderId = "evaluater"
@@ -219,7 +225,7 @@ if __name__ == '__main__':
             The purpose of  the majority decider algoritms must obtain a greater score than all agents.Hence,evaluater agents will be 
             argumentative. 
         """
-        sendingObjectList = {"model1": None,"lstm_agent": None,"arima":None,"copyYesterdayAgent":None,"rsiAgent":None,"evaluater": m1, "imitator": None,"mlpDecider":None,
+        sendingObjectList = {"model1": None,"lstm_agent": None,"arima":None,"copyYesterdayAgent":None,"rsiAgent":None,"mlpAgent":None,"evaluater": m1, "imitator": None,"mlpDecider":None,
                              "majorityDecider": None,"lstm_decider":None}
 
         m1.message = modelsList[-1].get_behaviourstate()
@@ -240,20 +246,20 @@ if __name__ == '__main__':
             Imitator object might be considered as a lstm that try to improve all agents performences.
             The differences between imitator and decider agents is that lstm might be more successful than classical decider according to our plan
         """
-        sendingObjectList = {"model1": None,"lstm_agent": None,"arima":None,"copyYesterdayAgent":None,"rsiAgent":None,"evaluater": None, "imitator": m1,"mlpDecider":None,"majorityDecider": None,"lstm_decider":None}
-        m1.message = modelsList[5].getAgentLastPredictionList()
+        sendingObjectList = {"model1": None,"lstm_agent": None,"arima":None,"copyYesterdayAgent":None,"rsiAgent":None,"mlpAgent":None,"evaluater": None, "imitator": m1,"mlpDecider":None,"majorityDecider": None,"lstm_decider":None}
+        m1.message = modelsList[6].getAgentLastPredictionList()
         # print("list",m1.message)
         m1.senderId = "evaluater"
         m1.messageType = "behaviourOfAgentNow"
         hp.communicateALLAgents(modelsList, m1.senderId, sendingObjectList)
 
-        print("GeneralScores:",modelsList[5].getAgentScores())
-        print("PeriodicScores:",modelsList[5].getPeriodicScoreTableAgents())
+        print("GeneralScores:",modelsList[6].getAgentScores())
+        print("PeriodicScores:",modelsList[6].getPeriodicScoreTableAgents())
 
-        if modelsList[5].getPeriodicScoreTableAgents() != {}:
-            lstmdeciderLog.append(modelsList[5].getPeriodicScoreTableAgents()["lstm_decider"])
-            majorityVotingLog.append(modelsList[5].getPeriodicScoreTableAgents()["majorityDecider"])
-            mlpdeciderLog.append(modelsList[5].getPeriodicScoreTableAgents()["mlpDecider"])
+        if modelsList[6].getPeriodicScoreTableAgents() != {}:
+            lstmdeciderLog.append(modelsList[6].getPeriodicScoreTableAgents()["lstm_decider"])
+            majorityVotingLog.append(modelsList[6].getPeriodicScoreTableAgents()["majorityDecider"])
+            mlpdeciderLog.append(modelsList[6].getPeriodicScoreTableAgents()["mlpDecider"])
         #print("PeriodicDatas",modelsList[3].getPeriodicScoreTableAgents())
     #hp.saveDatas(modelsList, filePath)
     plt.plot(lstmdeciderLog,'r',label='LstmDecider')  # plotting t, a separately

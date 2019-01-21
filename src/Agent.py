@@ -6,6 +6,7 @@ import model
 import dataset
 from LSTM_PREDICTOR import LSTM_PREDICTOR
 from MLPDecider import MLPDecider
+from MLPAgentNW import Mlpagentsp
 from RSIAgent import RSIAgent
 from CopyYesterdayAgent import CopyYesterdayAgent
 import HelperFunctions as hp
@@ -33,23 +34,29 @@ from osbrain import run_agent
 from osbrain import run_nameserver
 from osbrain import Agent
 from sklearn import linear_model
+
+
 class BehaviourState:
     HIGH_BUY = 4
     BUY = 3
     NONE = 2
     SELL = 1
     LOW_SELL = 0
-def downSampling(signal,periodicDownSampling):
+
+
+def downSampling(signal, periodicDownSampling):
     samplingSignal = []
-    for i,d in enumerate(signal):
-        if i%periodicDownSampling == 0:
+    for i, d in enumerate(signal):
+        if i % periodicDownSampling == 0:
             samplingSignal.append(d)
     return np.asarray(samplingSignal)
+
+
 def initialize_agent():
     trainingRate = 0.7
-    #data = pd.DataFrame(data = np.add(hp.sinData(3000,10), hp.cosData(3000,50)))#np.add(hp.sinData(1000,30), hp.sinData(1000,50)) #np.asarray(hp.sinData(1000,30))#hp.sinData(1000,30)#np.add(hp.sinData(1000,30), hp.sinData(1000,50))
-    #s = data.iloc[0:1000]
-    downSamplingSignal = downSampling(hp.readDataFromCSV("AMD.CSV")[0:],1)
+    # data = pd.DataFrame(data = np.add(hp.sinData(3000,10), hp.cosData(3000,50)))#np.add(hp.sinData(1000,30), hp.sinData(1000,50)) #np.asarray(hp.sinData(1000,30))#hp.sinData(1000,30)#np.add(hp.sinData(1000,30), hp.sinData(1000,50))
+    # s = data.iloc[0:1000]
+    downSamplingSignal = downSampling(hp.readDataFromCSV("../input/AMD.CSV")[0:], 1)
     s = pd.Series(downSamplingSignal)
     N = 2  # Filter order
 
@@ -57,46 +64,49 @@ def initialize_agent():
     B, A = signal.butter(N, Wn, output='ba')
     w, h = signal.freqs(B, A)
 
-    #Before this code comed to this block ,the signal was passing to a low pass filter
-    s = pd.DataFrame(data = signal.filtfilt(B, A, s))
-    plt.plot(s,'b',label='Line 1')
+    # Before this code comed to this block ,the signal was passing to a low pass filter
+    originalsignal = s
+    s = pd.DataFrame(data=signal.filtfilt(B, A, s))
+    plt.plot(s, 'b', label='Line 1')
     plt.legend()
     plt.show()
 
-    trainingLength = int(s.shape[0]*trainingRate)
+    trainingLength = int(s.shape[0] * trainingRate)
     trainingData = np.asarray(s[0:trainingLength].pct_change())[1:] * 100
     thresholdingVector = hp.findOptimalThresholds(trainingData, 5)
     financeData = np.asarray(s[trainingLength:])
     testdata = np.asarray(s[trainingLength:].pct_change())[0:] * 100
-
-    #trainingdata = trainingdata.squeeze(axis=1)
+    testDataOriginal = np.asarray(originalsignal[trainingLength:].pct_change())[0:] * 100
+    # trainingdata = trainingdata.squeeze(axis=1)
 
     """
         
     """
-    #s = pd.Series(hp.readDataFromCSV("AMD.CSV")[9000:9400])
-    #s = data[1000:3000]
-    #testdata = testdata.squeeze(axis=1)
+    # s = pd.Series(hp.readDataFromCSV("AMD.CSV")[9000:9400])
+    # s = data[1000:3000]
+    # testdata = testdata.squeeze(axis=1)
     # Setting evaluater thresholding vector table so that class loss error will be calculated by the evaluater
-    model1 = run_agent('Model1', base=LinearRegAgent)
-    model3 = run_agent('Model3', base=MovingAverageAgent)
+    model1 = run_agent('LinearRegFor3Day', base=LinearRegAgent)
+    lstm_predictor100 = run_agent('lstm_predictor100', base=LSTM_PREDICTOR)
+    mlpagentsp = run_agent('mlpAgenNw', base=Mlpagentsp)
     evaluate_agent = run_agent('Evaluator', base=EvaluatorAgent)
-    cnn_agent = run_agent('CNN_Agent',base = CNN_PREDICTOR)
-    copyYesterdayAgent = run_agent('CopyYesterdayAgent', base = CopyYesterdayAgent)
-    lstm_agent = run_agent('LSTM_Agent',base = LSTM_PREDICTOR)
-    lstm_decider =run_agent('LSTM_DECIDER',base=LSTM_DECIDER)
+    #cnn_agent = run_agent('CNN_Agent', base=CNN_PREDICTOR)
+    copyYesterdayAgent = run_agent('CopyYesterdayAgent', base=CopyYesterdayAgent)
+    lstm_agent = run_agent('LSTM_Agent', base=LSTM_PREDICTOR)
+    lstm_decider = run_agent('LSTM_DECIDER', base=LSTM_DECIDER)
     imitator = run_agent('Imitator', base=ImitatorAgent)
     majorityDecider = run_agent('MajorityDecider', base=MajorityDecider)
-    mlpDecider = run_agent('MLPDecider',base=MLPDecider)
+    mlpDecider = run_agent('MLPDecider', base=MLPDecider)
     arimaAgent = run_agent('ARIMAAgent', base=ARIMAAgent)
-    mlpAgent = run_agent('MLP_AGENT',base=MLPAgent)
-    rsiAgent = run_agent('RSIAgent',base = RSIAgent)
-    model1.uniqueId = "model1"
-    model3.uniqueId = "model3"
+    mlpAgent = run_agent('MLP_AGENT', base=MLPAgent)
+    rsiAgent = run_agent('RSIAgent', base=RSIAgent)
+    model1.uniqueId = "LinearRegFor3Day"
+    lstm_predictor100.uniqueId = "lstm_predictor100"
+    mlpagentsp.uniqueId = "mlpagentsp"
     mlpAgent.uniqueId = "mlpAgent"
     mlpDecider.uniqueId = "mlpDecider"
     copyYesterdayAgent.uniqueId = "copyYesterdayAgent"
-    #cnn_agent.uniqueId = "cnn_agent"
+    # cnn_agent.uniqueId = "cnn_agent"
     arimaAgent.uniqueId = "arima"
     rsiAgent.uniqueId = "rsiAgent"
     evaluate_agent.uniqueId = "evaluater"
@@ -105,59 +115,63 @@ def initialize_agent():
     majorityDecider.uniqueId = "majorityDecider"
     lstm_decider.uniqueId = "lstm_decider"
 
-    #cnn_agent.on_init_properity(3,thresholdingVector)
-    mlpAgent.on_init_properity(3,thresholdingVector)
-    copyYesterdayAgent.on_init_properity(thresholdingVector)
-    model1.on_init_properity(3,thresholdingVector)
-    model3.on_init_properity(5,thresholdingVector)
-    lstm_agent.on_init_properity(None,thresholdingVector)
-    arimaAgent.on_init_properity(5,thresholdingVector)
+    # cnn_agent.on_init_properity(3,thresholdingVector)
+    mlpagentsp.on_init_properity(40, thresholdingVector)
+    mlpAgent.on_init_properity(15, thresholdingVector)
+    # copyYesterdayAgent.on_init_properity(thresholdingVector)
+    model1.on_init_properity(3, thresholdingVector)
+    lstm_predictor100.on_init_properity(100, thresholdingVector)
+    lstm_agent.on_init_properity(15, thresholdingVector)
+    arimaAgent.on_init_properity(5, thresholdingVector)
     evaluate_agent.on_init_properity(thresholdingVector)
-    lstm_decider.on_init_properity(3,thresholdingVector)
-    mlpDecider.on_init_properity(3,thresholdingVector)
-    #cnn_agent.train(trainingdata)
+    lstm_decider.on_init_properity(3, thresholdingVector)
+    mlpDecider.on_init_properity(3, thresholdingVector)
+    # cnn_agent.train(trainingdata)
+    mlpagentsp.train(trainingData)
     lstm_agent.train(trainingData)
+    #lstm_predictor100.train(trainingData)
     mlpAgent.train(trainingData)
-
     modelsList.append(model1)
     modelsList.append(lstm_agent)
     modelsList.append(arimaAgent)
-    modelsList.append(copyYesterdayAgent)
+    #modelsList.append(lstm_predictor100)
     modelsList.append(rsiAgent)
     modelsList.append(mlpAgent)
-    #modelsList.append(cnn_agent)
+    modelsList.append(mlpagentsp)
+    # modelsList.append(cnn_agent)
     modelsList.append(evaluate_agent)
     modelsList.append(imitator)
     modelsList.append(mlpDecider)
     modelsList.append(majorityDecider)
     modelsList.append(lstm_decider)
 
-    return financeData,modelsList,testdata
+    return financeData, modelsList, testdata,testDataOriginal
+
+
 if __name__ == '__main__':
     modelsList = []
     filePath = "globalsave"
     ns = run_nameserver()
     server = run_agent('Server', base=Server)
 
-    financeData,modelsList, data = initialize_agent()
+    financeData, modelsList, data,testDataOriginal = initialize_agent()
 
-    hp.initialConnectionsAgent(modelsList,server)
+    hp.initialConnectionsAgent(modelsList, server)
     # Send messages
     m1 = MessageType()
-    #modelsList = loadDatas(modelsList,filePath)
-    hp.loadDatas(modelsList,filePath)
-    agentlist = hp.getAgentList(modelsList)#all agent names have been stored in this list
+    # modelsList = loadDatas(modelsList,filePath)
+    hp.loadDatas(modelsList, filePath)
+    agentlist = hp.getAgentList(modelsList)  # all agent names have been stored in this list
 
     lstmdeciderLog = []
     mlpdeciderLog = []
     majorityVotingLog = []
-    print(np.squeeze(financeData,axis=1))
+    print(np.squeeze(financeData, axis=1))
 
-
-    for i,d in enumerate(data):
-        #In the loop for testing some probabilities
+    for i, d in enumerate(data):
+        # In the loop for testing some probabilities
         majorityDeciderFeedBack = []
-        m1.message = [d,i-1,financeData[i]]
+        m1.message = [d, i - 1, financeData[i],testDataOriginal[i]]
 
         if i == 0:
             continue
@@ -175,13 +189,15 @@ if __name__ == '__main__':
                 *The priority of the calculating scores can be important due to server priority that depended on agents based system 
         """
         modelsList[6].update()
-        print("time:",i)
-        print("data:",d)
+        print("time:", i)
+        print("data:", d)
         """
             In this part of the agent.py code main loop after evaluater collects behaviours of the agents ,they decided to broadcast it to imitator.
             Therefore,at the first part of the code might be sended to a empty behaviours to the agents  
         """
-        sendingObjectList = {"model1": None,"lstm_agent": None,"arima":None,"copyYesterdayAgent":None,"rsiAgent":None,"mlpAgent":None,"evaluater": None, "imitator": m1,"mlpDecider":None,"majorityDecider":None,"lstm_decider":None}
+        sendingObjectList = {"LinearRegFor3Day": None, "lstm_agent": None, "arima": None,
+                             "rsiAgent": None, "mlpAgent": None,"mlpagentsp":None, "evaluater": None, "imitator": m1, "mlpDecider": None,
+                             "majorityDecider": None, "lstm_decider": None}
         m1.message = modelsList[6].getLastBehavioursAgents()
         # # print("list",m1.message)
         m1.senderId = "evaluater"
@@ -198,25 +214,28 @@ if __name__ == '__main__':
         """
             All decisions is sending to evaluater before running majoritydecider or any decider agent.
         """
-        sendingObjectList = {"model1": None,"lstm_agent": None,"arima":None,"copyYesterdayAgent":None,"rsiAgent":None,"mlpAgent":None,"evaluater": m1,
-                             "imitator": None,"mlpDecider":None, "majorityDecider": None,"lstm_decider":None}
-        for j in range(0,6,1):
+        sendingObjectList = {"LinearRegFor3Day": None, "lstm_agent": None, "arima": None,
+                             "rsiAgent": None, "mlpAgent": None,"mlpagentsp":None, "evaluater": m1,
+                             "imitator": None, "mlpDecider": None, "majorityDecider": None, "lstm_decider": None}
+        for j in range(0,6, 1):
             m1.message = modelsList[j].get_behaviourstate()
             m1.senderId = modelsList[j].uniqueId
             m1.messageType = "behaviourOfAgentNow"
             majorityDeciderFeedBack.append(m1.message)
-            hp.communicateALLAgents(modelsList,m1.senderId,sendingObjectList)
+            hp.communicateALLAgents(modelsList, m1.senderId, sendingObjectList)
         """
             Evaluator is sending their datas to majoritydecider to take a greater score than all agents behaviours 
         """
-        sendingObjectList = {"model1": None,"lstm_agent": None,"arima":None,"copyYesterdayAgent":None,"rsiAgent":None,"mlpAgent":None,"evaluater": None, "imitator": None,
-                             "mlpDecider":m1,"majorityDecider": m1,"lstm_decider":m1}
+        sendingObjectList = {"LinearRegFor3Day": None, "lstm_agent": None, "arima": None,
+                             "rsiAgent": None, "mlpAgent": None,"mlpagentsp":None,"evaluater": None, "imitator": None,
+                             "mlpDecider": m1, "majorityDecider": m1, "lstm_decider": m1}
         m1.message = majorityDeciderFeedBack
         m1.senderId = "evaluater"
+        print("message", m1.message)
         hp.communicateALLAgents(modelsList, m1.senderId, sendingObjectList)
 
-        #Decider will be runned in this method because of its priority
-        #This priority is more important than some priority that is located in this while loop
+        # Decider will be runned in this method because of its priority
+        # This priority is more important than some priority that is located in this while loop
         modelsList[-1].evaluate_behaviour()
         modelsList[-2].evaluate_behaviour()
         modelsList[-3].evaluate_behaviour()
@@ -225,8 +244,9 @@ if __name__ == '__main__':
             The purpose of  the majority decider algoritms must obtain a greater score than all agents.Hence,evaluater agents will be 
             argumentative. 
         """
-        sendingObjectList = {"model1": None,"lstm_agent": None,"arima":None,"copyYesterdayAgent":None,"rsiAgent":None,"mlpAgent":None,"evaluater": m1, "imitator": None,"mlpDecider":None,
-                             "majorityDecider": None,"lstm_decider":None}
+        sendingObjectList = {"LinearRegFor3Day": None, "lstm_agent": None, "arima": None,
+                             "rsiAgent": None, "mlpAgent": None,"mlpagentsp":None,"evaluater": m1, "imitator": None, "mlpDecider": None,
+                             "majorityDecider": None, "lstm_decider": None}
 
         m1.message = modelsList[-1].get_behaviourstate()
         m1.senderId = modelsList[-1].uniqueId
@@ -246,27 +266,29 @@ if __name__ == '__main__':
             Imitator object might be considered as a lstm that try to improve all agents performences.
             The differences between imitator and decider agents is that lstm might be more successful than classical decider according to our plan
         """
-        sendingObjectList = {"model1": None,"lstm_agent": None,"arima":None,"copyYesterdayAgent":None,"rsiAgent":None,"mlpAgent":None,"evaluater": None, "imitator": m1,"mlpDecider":None,"majorityDecider": None,"lstm_decider":None}
+        sendingObjectList = {"LinearRegFor3Day": None, "lstm_agent": None, "arima": None,
+                             "rsiAgent": None, "mlpAgent": None,"mlpagentsp":None,"evaluater": None, "imitator": m1, "mlpDecider": None,
+                             "majorityDecider": None, "lstm_decider": None}
         m1.message = modelsList[6].getAgentLastPredictionList()
         # print("list",m1.message)
         m1.senderId = "evaluater"
         m1.messageType = "behaviourOfAgentNow"
         hp.communicateALLAgents(modelsList, m1.senderId, sendingObjectList)
 
-        print("GeneralScores:",modelsList[6].getAgentScores())
-        print("PeriodicScores:",modelsList[6].getPeriodicScoreTableAgents())
+        print("GeneralScores:", modelsList[6].getAgentScores())
+        print("PeriodicScores:", modelsList[6].getPeriodicScoreTableAgents())
 
         if modelsList[6].getPeriodicScoreTableAgents() != {}:
             lstmdeciderLog.append(modelsList[6].getPeriodicScoreTableAgents()["lstm_decider"])
             majorityVotingLog.append(modelsList[6].getPeriodicScoreTableAgents()["majorityDecider"])
             mlpdeciderLog.append(modelsList[6].getPeriodicScoreTableAgents()["mlpDecider"])
-        #print("PeriodicDatas",modelsList[3].getPeriodicScoreTableAgents())
-    #hp.saveDatas(modelsList, filePath)
-    plt.plot(lstmdeciderLog,'r',label='LstmDecider')  # plotting t, a separately
-    plt.plot(majorityVotingLog,'b',label='majorityVoting')  # plotting t, b separately
+        # print("PeriodicDatas",modelsList[3].getPeriodicScoreTableAgents())
+    # hp.saveDatas(modelsList, filePath)
+    plt.plot(lstmdeciderLog, 'r', label='LstmDecider')  # plotting t, a separately
+    plt.plot(majorityVotingLog, 'b', label='majorityVoting')  # plotting t, b separately
     plt.plot(mlpdeciderLog, 'y', label='mlpDecider')  # plotting t, b separately
     plt.legend()
     plt.show()
 
-    #modelsList[5].saveDataFrameCSV()
+    # modelsList[5].saveDataFrameCSV()
     ns.shutdown()

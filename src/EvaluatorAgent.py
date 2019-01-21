@@ -124,16 +124,16 @@ class EvaluatorAgent(Model):
         #print("lastPeriodScores:",self.periodicScoreTableAgents)
     #this method recive broadcasting data from server after every broadcast is actualized
     def receive_server_broadcast_message(self, receivingObjectFromServer):
-        self.log_info('ReceivedFromServer: %s' % receivingObjectFromServer.message[0])
+        self.log_info('ReceivedFromServerEvaluater: %s' % receivingObjectFromServer.message[0])
         temp = 0
-        if receivingObjectFromServer.message[0] != None:
-            if receivingObjectFromServer.message[0] > self.thresholdArray[0]:
+        if receivingObjectFromServer.message[3] != None:
+            if receivingObjectFromServer.message[3] > self.thresholdArray[0]:
                 temp = BehaviourState.HIGH_BUY
-            elif receivingObjectFromServer.message[0] > self.thresholdArray[1]:
+            elif receivingObjectFromServer.message[3] > self.thresholdArray[1]:
                 temp = BehaviourState.BUY
-            elif receivingObjectFromServer.message[0] > self.thresholdArray[2]:
+            elif receivingObjectFromServer.message[3] > self.thresholdArray[2]:
                 temp = BehaviourState.NONE
-            elif receivingObjectFromServer.message[0] > self.thresholdArray[3]:
+            elif receivingObjectFromServer.message[3] > self.thresholdArray[3]:
                 temp = BehaviourState.SELL
             else:
                 temp = BehaviourState.LOW_SELL

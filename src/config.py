@@ -57,7 +57,7 @@ class ConfigLSTM(GenericConfig):
         # Model params
         self.INPUT_SIZE = 5
         self.OUTPUT_SIZE = 5
-        self.SEQ_LEN = 15
+        self.SEQ_LEN = None
 class ConfigMLP(GenericConfig):
     def __init__(self):
         GenericConfig.__init__(self)

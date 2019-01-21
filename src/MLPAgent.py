@@ -34,8 +34,6 @@ class MLPAgent(Model):
         if receivingObjectFromAgent != None:
             self.log_info('ReceivedFromAgent: %s' % receivingObjectFromAgent.senderId)
             self.log_info('ReceivedFromAgent: %s' % receivingObjectFromAgent.message)
-
-
     def loadALLVariables(self, pathOfImitatorObject):
         data = np.load(pathOfImitatorObject)
         self.dataMemory = data['dataMemory'].tolist()

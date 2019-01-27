@@ -50,7 +50,7 @@ class MLPAgent(Model):
             tempFrame = dataN[i:i+self.filterSize]
             tempFrame = np.squeeze(tempFrame, axis=1)
             if i+self.filterSize < len(dataN):
-                """Some of the features is being implemented to train a multi layer perceptron"""
+                """Some of the features are being implemented to train a multi layer perceptron"""
                 temp.append(tempFrame[0])
                 temp.append(tempFrame[-1])
                 temp.append(tempFrame[int(self.filterSize/2)])

@@ -15,6 +15,7 @@ class EvaluatorAgent(Model):
 
     agentLastPredictionList = []
     agentPredictionList = {}
+    agent_total_money_list = {}
     agentEvaluationStartData = 0
     diffRealBehaviourValue = []
     overallscoreAgents = {}
@@ -22,7 +23,7 @@ class EvaluatorAgent(Model):
     periodOfData = 500
     scoreOfTheLastBehaviours = {}
     thresholdArray = []
-    startPointScoresCalc = 400
+    startPointScoresCalc = 100
 
     def on_init_properity(self,thresholding):
         self.thresholdArray = thresholding
@@ -33,10 +34,31 @@ class EvaluatorAgent(Model):
         if len(self.dataClassMemory) > self.startPointScoresCalc:
             if self.agentPredictionList.__contains__(recevingObjectFromAgent.senderId):
                 self.agentPredictionList[recevingObjectFromAgent.senderId].append(recevingObjectFromAgent.message)
+                tempvar = self.agent_total_money_list[recevingObjectFromAgent.senderId]
+                money,amountinvestment = self.res_agent_behaviour(recevingObjectFromAgent.message,tempvar[1],tempvar[0])
+                self.agent_total_money_list[recevingObjectFromAgent.senderId] = [money,amountinvestment]
             else:
                 self.agentPredictionList[recevingObjectFromAgent.senderId] = [recevingObjectFromAgent.message]
+                self.agent_total_money_list[recevingObjectFromAgent.senderId] = [1000.0,0]
             return None
         # The method provide to send to message from self to another agent
+    def res_agent_behaviour(self,behaviour,amountinvestment,money):
+        signal_memory = np.squeeze(self.signalMemory)
+
+        if behaviour == BehaviourState.HIGH_BUY and amountinvestment == 0:
+            amountinvestment = money /signal_memory[-1]
+            money = 0
+        if  behaviour == BehaviourState.BUY and amountinvestment == 0:
+            amountinvestment = money /signal_memory[-1]
+            money = 0
+        if behaviour == BehaviourState.LOW_SELL and amountinvestment != 0:
+            money = amountinvestment*signal_memory[-1]
+            amountinvestment = 0
+        if behaviour == BehaviourState.SELL and amountinvestment != 0:
+            money = amountinvestment * signal_memory[-1]
+            amountinvestment = 0
+
+        return money,amountinvestment
 
     def loadALLVariables(self, pathOfImitatorObject):
         data = np.load(pathOfImitatorObject)
@@ -103,6 +125,8 @@ class EvaluatorAgent(Model):
             # print(np.sum(confusionmatrix, axis=1))
             tempScores = np.sum(tempPredictionList[-self.periodOfData:] == realList[-self.periodOfData:])/len(realList[-self.periodOfData:])
             self.periodicScoreTableAgents[key] = tempScores
+    def get_agent_total_money_list(self):
+        return self.agent_total_money_list
     def getAgentPredictions(self):
         return self.agentPredictionList
     def getAgentScores(self):
@@ -124,7 +148,7 @@ class EvaluatorAgent(Model):
         #print("lastPeriodScores:",self.periodicScoreTableAgents)
     #this method recive broadcasting data from server after every broadcast is actualized
     def receive_server_broadcast_message(self, receivingObjectFromServer):
-        self.log_info('ReceivedFromServerEvaluater: %s' % receivingObjectFromServer.message[0])
+        self.log_info('ReceivedFromServerEvaluater: %s' % receivingObjectFromServer.message[3])
         temp = 0
         if receivingObjectFromServer.message[3] != None:
             if receivingObjectFromServer.message[3] > self.thresholdArray[0]:
@@ -139,3 +163,4 @@ class EvaluatorAgent(Model):
                 temp = BehaviourState.LOW_SELL
         self.dataTime.append(receivingObjectFromServer.message[1])
         self.dataClassMemory.append(temp)
+        self.signalMemory.append(receivingObjectFromServer.message[4])

@@ -56,7 +56,7 @@ def initialize_agent():
     trainingRate = 0.7
     # data = pd.DataFrame(data = np.add(hp.sinData(3000,10), hp.cosData(3000,50)))#np.add(hp.sinData(1000,30), hp.sinData(1000,50)) #np.asarray(hp.sinData(1000,30))#hp.sinData(1000,30)#np.add(hp.sinData(1000,30), hp.sinData(1000,50))
     # s = data.iloc[0:1000]
-    downSamplingSignal = downSampling(hp.readDataFromCSV("../input/AMD.CSV")[0:], 1)
+    downSamplingSignal = downSampling(hp.readDataFromCSV("../input/NKE.CSV")[0:], 1)
     s = pd.Series(downSamplingSignal)
     N = 2  # Filter order
 
@@ -66,10 +66,9 @@ def initialize_agent():
 
     # Before this code comed to this block ,the signal was passing to a low pass filter
     originalsignal = s
+    #s = pd.DataFrame(data=s)
     s = pd.DataFrame(data=signal.filtfilt(B, A, s))
-    plt.plot(s, 'b', label='Line 1')
-    plt.legend()
-    plt.show()
+
 
     trainingLength = int(s.shape[0] * trainingRate)
     trainingData = np.asarray(s[0:trainingLength].pct_change())[1:] * 100
@@ -77,6 +76,11 @@ def initialize_agent():
     financeData = np.asarray(s[trainingLength:])
     testdata = np.asarray(s[trainingLength:].pct_change())[0:] * 100
     testDataOriginal = np.asarray(originalsignal[trainingLength:].pct_change())[0:] * 100
+    print("testData",testdata)
+    print("financeData",financeData)
+    print("testDataOriginal",testDataOriginal)
+    print("originalFinanceSignal",np.asarray(originalsignal[trainingLength:]))
+
     # trainingdata = trainingdata.squeeze(axis=1)
 
     """
@@ -145,7 +149,7 @@ def initialize_agent():
     modelsList.append(majorityDecider)
     modelsList.append(lstm_decider)
 
-    return financeData, modelsList, testdata,testDataOriginal
+    return financeData, modelsList, testdata,testDataOriginal,np.asarray(originalsignal[trainingLength:])
 
 
 if __name__ == '__main__':
@@ -154,7 +158,7 @@ if __name__ == '__main__':
     ns = run_nameserver()
     server = run_agent('Server', base=Server)
 
-    financeData, modelsList, data,testDataOriginal = initialize_agent()
+    financeData, modelsList, data,testDataOriginal,originalFinanceSignal = initialize_agent()
 
     hp.initialConnectionsAgent(modelsList, server)
     # Send messages
@@ -171,7 +175,7 @@ if __name__ == '__main__':
     for i, d in enumerate(data):
         # In the loop for testing some probabilities
         majorityDeciderFeedBack = []
-        m1.message = [d, i - 1, financeData[i],testDataOriginal[i]]
+        m1.message = [d, i - 1, financeData[i],testDataOriginal[i],originalFinanceSignal[i]]
 
         if i == 0:
             continue
@@ -181,7 +185,6 @@ if __name__ == '__main__':
         """
         server.server_broadcast(m1)
         print(financeData[i])
-
         print(len(data))
         """
             After server broadcasting the message and all messages had been reached to agents by server,the evaluater will be updated because of given reasons:
@@ -275,6 +278,7 @@ if __name__ == '__main__':
         m1.messageType = "behaviourOfAgentNow"
         hp.communicateALLAgents(modelsList, m1.senderId, sendingObjectList)
 
+        print("Investmenlist:",modelsList[6].get_agent_total_money_list())
         print("GeneralScores:", modelsList[6].getAgentScores())
         print("PeriodicScores:", modelsList[6].getPeriodicScoreTableAgents())
 

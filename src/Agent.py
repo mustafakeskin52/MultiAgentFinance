@@ -51,30 +51,41 @@ def downSampling(signal, periodicDownSampling):
             samplingSignal.append(d)
     return np.asarray(samplingSignal)
 
-
 def initialize_agent():
-    trainingRate = 0.7
-    # data = pd.DataFrame(data = np.add(hp.sinData(3000,10), hp.cosData(3000,50)))#np.add(hp.sinData(1000,30), hp.sinData(1000,50)) #np.asarray(hp.sinData(1000,30))#hp.sinData(1000,30)#np.add(hp.sinData(1000,30), hp.sinData(1000,50))
+    trainingRate = 0.70
+    #data = pd.DataFrame(data = np.add(hp.sinData(3000,40),hp.cosData(3000,80)))#pd.DataFrame(data = np.add(hp.sinData(3000,10), hp.cosData(3000,50)))#np.add(hp.sinData(1000,30), hp.sinData(1000,50)) #np.asarray(hp.sinData(1000,30))#hp.sinData(1000,30)#np.add(hp.sinData(1000,30), hp.sinData(1000,50))
     # s = data.iloc[0:1000]
-    downSamplingSignal = downSampling(hp.readDataFromCSV("../input/NKE.CSV")[0:], 1)
-    s = pd.Series(downSamplingSignal)
+
+    downSamplingSignal = downSampling(hp.readDataFromCSV("../input/weather_2017.CSV")[0:], 1)
+    s = pd.DataFrame(data=downSamplingSignal)#pd.Series(downSamplingSignal)
+    #s = pd.rolling_mean(s,30)[40:]
+
+    #s = data
+    plt.plot(s, 'r', label='signal')  # plotting t, a separately
+    plt.legend()
+    plt.show()
+    #s = pd.rolling_mean(pd.Series(downSamplingSignal[0:]),15)[20:]
+    #s = pd.Series(downSamplingSignal)
     N = 2  # Filter order
 
     Wn = 0.3
     B, A = signal.butter(N, Wn, output='ba')
-    w, h = signal.freqs(B, A)
 
     # Before this code comed to this block ,the signal was passing to a low pass filter
     originalsignal = s
-    #s = pd.DataFrame(data=s)
-    s = pd.DataFrame(data=signal.filtfilt(B, A, s))
-
 
     trainingLength = int(s.shape[0] * trainingRate)
-    trainingData = np.asarray(s[0:trainingLength].pct_change())[1:] * 100
+
+    #s = pd.DataFrame(data=signal.filtfilt(B, A, s[0:trainingLength],axis=0))
+
+    #s = pd.DataFrame(data=s[0:trainingLength])
+    #If received data is not as defined a pandas frame,this data must be converted to pandas frame
+    #s = pd.rolling_mean(s[0:trainingLength],15)[20:trainingLength]
+
+    trainingData = np.asarray(s.pct_change())[1:] * 100
     thresholdingVector = hp.findOptimalThresholds(trainingData, 5)
-    financeData = np.asarray(s[trainingLength:])
-    testdata = np.asarray(s[trainingLength:].pct_change())[0:] * 100
+    financeData = np.asarray(pd.DataFrame(data=originalsignal)[trainingLength:])
+    testdata = np.asarray(pd.DataFrame(data=originalsignal)[trainingLength:].pct_change())[0:] * 100
     testDataOriginal = np.asarray(originalsignal[trainingLength:].pct_change())[0:] * 100
     print("testData",testdata)
     print("financeData",financeData)
@@ -125,7 +136,7 @@ def initialize_agent():
     # copyYesterdayAgent.on_init_properity(thresholdingVector)
     model1.on_init_properity(3, thresholdingVector)
     lstm_predictor100.on_init_properity(100, thresholdingVector)
-    lstm_agent.on_init_properity(15, thresholdingVector)
+    lstm_agent.on_init_properity(5, thresholdingVector)
     arimaAgent.on_init_properity(5, thresholdingVector)
     evaluate_agent.on_init_properity(thresholdingVector)
     lstm_decider.on_init_properity(3, thresholdingVector)
@@ -133,12 +144,12 @@ def initialize_agent():
     # cnn_agent.train(trainingdata)
     mlpagentsp.train(trainingData)
     lstm_agent.train(trainingData)
-    #lstm_predictor100.train(trainingData)
+
     mlpAgent.train(trainingData)
     modelsList.append(model1)
     modelsList.append(lstm_agent)
     modelsList.append(arimaAgent)
-    #modelsList.append(lstm_predictor100)
+
     modelsList.append(rsiAgent)
     modelsList.append(mlpAgent)
     modelsList.append(mlpagentsp)
@@ -175,7 +186,17 @@ if __name__ == '__main__':
     for i, d in enumerate(data):
         # In the loop for testing some probabilities
         majorityDeciderFeedBack = []
-        m1.message = [d, i - 1, financeData[i],testDataOriginal[i],originalFinanceSignal[i]]
+        if i < 0:
+            #print("last five data:",data[i-4:i+1])
+            #print("sending value:",d)
+            #print("the mean of last five values",np.mean(data[:-5]))
+            print("i>7 data",np.expand_dims(np.mean(data[i-14:i+1]),axis=0))
+            print("i>7 finance data",np.expand_dims(np.mean(financeData[i-14:i+1]),axis=0))
+            m1.message = [np.expand_dims(np.mean(data[i-14:i+1]),axis=0), i - 1,np.expand_dims(np.mean(financeData[i-14:i+1]),axis=0), testDataOriginal[i], originalFinanceSignal[i]]
+        else:
+            print("i<7 data",d)
+            print("i<7 financeData",financeData[i])
+            m1.message = [d, i - 1, financeData[i],testDataOriginal[i],originalFinanceSignal[i]]
 
         if i == 0:
             continue
@@ -192,8 +213,6 @@ if __name__ == '__main__':
                 *The priority of the calculating scores can be important due to server priority that depended on agents based system 
         """
         modelsList[6].update()
-        print("time:", i)
-        print("data:", d)
         """
             In this part of the agent.py code main loop after evaluater collects behaviours of the agents ,they decided to broadcast it to imitator.
             Therefore,at the first part of the code might be sended to a empty behaviours to the agents  
@@ -277,7 +296,8 @@ if __name__ == '__main__':
         m1.senderId = "evaluater"
         m1.messageType = "behaviourOfAgentNow"
         hp.communicateALLAgents(modelsList, m1.senderId, sendingObjectList)
-
+        print("time:", i)
+        print("data:", financeData[i])
         print("Investmenlist:",modelsList[6].get_agent_total_money_list())
         print("GeneralScores:", modelsList[6].getAgentScores())
         print("PeriodicScores:", modelsList[6].getPeriodicScoreTableAgents())

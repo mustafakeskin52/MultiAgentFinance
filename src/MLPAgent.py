@@ -97,6 +97,7 @@ class MLPAgent(Model):
                 result[i] = BehaviourState.LOW_SELL
         return result
     # The method provides to send to message from self to another agent
+    # The method provides to send to message from self to another agent
     def evaluate_behaviour(self):
 
         if len(self.dataMemory) > 30:

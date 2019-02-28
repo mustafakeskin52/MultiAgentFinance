@@ -23,7 +23,7 @@ class EvaluatorAgent(Model):
     periodOfData = 500
     scoreOfTheLastBehaviours = {}
     thresholdArray = []
-    startPointScoresCalc = 100
+    startPointScoresCalc = 300
 
     def on_init_properity(self,thresholding):
         self.thresholdArray = thresholding

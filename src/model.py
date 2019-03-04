@@ -393,7 +393,7 @@ class LSTM(GenericModel):
         # todo: I have found that initialization destroys the learning process. Think why and fixit.
         # self.initialize()
 
-        self.criterion = nn.NLLLoss()
+        self.criterion = nn.MSELoss
         self.optimizer = optim.Adam(self.parameters(), 0.005)
 
     def initialize(self):
@@ -432,7 +432,7 @@ class LSTM(GenericModel):
 
         # send batch size to auto update hiddens
         batch_size = x.shape[0]
-        self.hidden = self.init_hidden(batch_size=batch_size)
+        # self.hidden = self.init_hidden(batch_size=batch_size)
 
         # x = x.view(self.seq_length, -1, self.input_size)
         x = torch.transpose(x,0,1)
@@ -442,6 +442,8 @@ class LSTM(GenericModel):
         # output of shape (seq_len, batch, num_directions * hidden_size)
         out = lstm_out[-1]
         fc_out = self.fc(out)
+
+        self.hidden = (self.hidden[0].detach(), self.hidden[1].detach())
 
         # soft_out = self.softmax(fc_out)
         # log_softmax = F.log_softmax(fc_out, dim=1)

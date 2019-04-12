@@ -23,7 +23,7 @@ class EvaluatorAgent(Model):
     periodOfData = 500
     scoreOfTheLastBehaviours = {}
     thresholdArray = []
-    startPointScoresCalc = 300
+    startPointScoresCalc = 200
 
     def on_init_properity(self,thresholding):
         self.thresholdArray = thresholding
@@ -84,19 +84,22 @@ class EvaluatorAgent(Model):
     #This score is a rate over 1.00
     def updateScores(self):
         for key in self.agentPredictionList:
-            print("name:",key)
-            tempPredictionList = np.asarray(self.agentPredictionList[key])
-            realList = self.dataClassMemory[-len(tempPredictionList):]
-            confusionmatrix = confusion_matrix(realList, tempPredictionList, labels=[4, 3, 2,1,0])
-            np.set_printoptions(precision=2)
+            print("Evaluation of the :",key)
+            tempPredictionList = np.squeeze(np.asarray(self.agentPredictionList[key]))
+            realList = np.squeeze(np.asarray(self.dataClassMemory[-tempPredictionList.size:]))
+
+            print("Loss:",np.mean(np.square(tempPredictionList - realList)))
+            print("Score",np.count_nonzero(tempPredictionList*realList>0)/tempPredictionList.size)
+            #confusionmatrix = confusion_matrix(realList, tempPredictionList, labels=[4, 3, 2,1,0])
+           # np.set_printoptions(precision=2)
             #To normalize row of the confusion matrix
             drawConfusionMatrix = []
-            for i, d in enumerate(np.sum(confusionmatrix,axis=1)):
-                drawConfusionMatrix.append(confusionmatrix[i, :] / d)
+            #for i, d in enumerate(np.sum(confusionmatrix,axis=1)):
+            #    drawConfusionMatrix.append(confusionmatrix[i, :] / d)
 
-            print(np.asarray(drawConfusionMatrix))
-            print(np.sum(confusionmatrix,axis=1))
-            self.overallscoreAgents[key] = np.sum(tempPredictionList == realList) / len(realList)
+            #print(np.asarray(drawConfusionMatrix))
+            #print(np.sum(confusionmatrix,axis=1))
+            #self.overallscoreAgents[key] = np.sum(tempPredictionList == realList) / len(realList)
 
         # This score give a frame succeed rate.It is different from updateScores due to it calculate truth table of a period of data
         # And it return a table that filled with true or not
@@ -162,5 +165,5 @@ class EvaluatorAgent(Model):
             else:
                 temp = BehaviourState.LOW_SELL
         self.dataTime.append(receivingObjectFromServer.message[1])
-        self.dataClassMemory.append(temp)
+        self.dataClassMemory.append(receivingObjectFromServer.message[3])
         self.signalMemory.append(receivingObjectFromServer.message[4])

@@ -26,8 +26,12 @@ class MajorityDecider(Model):
     # The method provide to send to message from self to another agent
     def evaluate_behaviour(self):
         t = self.dataTime[-1]
-        print("self.agentsBeheviours",self.agentsBeheviours)
+
         lastBehaviour = np.asarray(self.agentsBeheviours)
-        unique_elements, counts_elements = np.unique(lastBehaviour, return_counts=True)
-        self.behaviourState = unique_elements[np.argmax(counts_elements)]
+
+        result = np.count_nonzero(lastBehaviour > 0) / lastBehaviour.size
+        if result > 0.5:
+            self.behaviourState = 1
+        else:
+            self.behaviourState = -1
 

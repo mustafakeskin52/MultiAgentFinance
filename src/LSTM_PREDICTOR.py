@@ -44,18 +44,19 @@ class LSTM_PREDICTOR(Model):
         np.savez(pathOfImitatorObject,dataMemory=self.dataMemory,
                  dataTime=self.dataTime)
     def train(self,dataN):
-        classDatas = self.dataToClassFunc(dataN,self.thresholding)
-        print("Len:",self.config.SEQ_LEN)
+        classDatas = np.squeeze(dataN,axis=1)
+        #classDatas = np.divide(classDatas,100)
+
         data = dataset.OnlineLearningFinancialData(seq_len=self.config.SEQ_LEN, data=classDatas, categoricalN=5)
         self.model_lstm = model.LSTM(input_size=self.config.INPUT_SIZE, seq_length=self.config.SEQ_LEN, num_layers=2,
                           out_size=self.config.OUTPUT_SIZE, hidden_size=5, batch_size=self.config.TRAIN_BATCH_SIZE,
                            device=self.config.DEVICE)
         self.experiment = Experiment(config=self.config, model=self.model_lstm, dataset=data)
         self.experiment.run()
+
     def predict(self):
-        classDatas = self.dataToClassFunc(np.asarray(self.dataMemory[-self.config.SEQ_LEN:]),self.thresholding)
-        print(classDatas)
-        return np.asarray(self.experiment.predict_lstm(classDatas,self.config.INPUT_SIZE))[0]
+        classDatas = np.asarray(self.dataMemory[-self.config.SEQ_LEN:])
+        return np.asarray(self.experiment.predict_lstm(classDatas,self.config.INPUT_SIZE))
     def dataToClassFunc(self,data, thresholding):
         result = np.zeros(data.shape[0])
 
@@ -79,3 +80,6 @@ class LSTM_PREDICTOR(Model):
             self.behaviourState = self.predict()
         else:
             self.behaviourState = BehaviourState.NONE
+
+    def get_behaviourstate(self):
+        return self.behaviourState

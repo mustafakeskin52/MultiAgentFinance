@@ -68,14 +68,14 @@ class MLPAgent(Model):
             featureMatrix.append(temp)
         return np.asarray(featureMatrix)
     def train(self,dataN):
-        dataY = self.dataToClassFunc(dataN[self.filterSize:], self.thresholding)
+        dataY = dataN[self.filterSize:]
         dataX = self.featureExtraction(dataN)
 
         print("dataX",dataX.shape)
         print("dataY",dataY.shape)
 
         data = dataset.MLPOnlineDataset(dataX=dataX, dataY=dataY)
-        self.model_mlp = model.MLP(input_size=11, output_size=5)
+        self.model_mlp = model.MLP(input_size=11, output_size=1)
         self.experiment = Experiment(config=self.config, model=self.model_mlp, dataset=data)
         self.experiment.run()
 

@@ -41,15 +41,4 @@ class LinearRegAgent(Model):
             #print(t)
             regr = linear_model.LinearRegression()
             regr.fit(time,self.dataMemory[t - self.lastN:t])
-            predictionValue = regr.predict(t)
-
-            if predictionValue > self.thresholding[0]:
-                self.behaviourState = BehaviourState.HIGH_BUY
-            elif predictionValue > self.thresholding[1]:
-                self.behaviourState = BehaviourState.BUY
-            elif predictionValue > self.thresholding[2]:
-                self.behaviourState = BehaviourState.NONE
-            elif predictionValue > self.thresholding[3]:
-                self.behaviourState = BehaviourState.SELL
-            else:
-                self.behaviourState = BehaviourState.LOW_SELL
+            self.behaviourState = regr.predict(t)

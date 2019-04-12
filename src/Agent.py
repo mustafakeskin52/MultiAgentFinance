@@ -53,7 +53,7 @@ def downSampling(signal, periodicDownSampling):
 
 def initialize_agent():
     trainingRate = 0.70
-    #data = pd.DataFrame(data = np.add(hp.sinData(3000,40),hp.cosData(3000,80)))#pd.DataFrame(data = np.add(hp.sinData(3000,10), hp.cosData(3000,50)))#np.add(hp.sinData(1000,30), hp.sinData(1000,50)) #np.asarray(hp.sinData(1000,30))#hp.sinData(1000,30)#np.add(hp.sinData(1000,30), hp.sinData(1000,50))
+    #downSamplingSignal = pd.DataFrame(data = np.add(hp.sinData(3000,40),hp.cosData(3000,80)))#pd.DataFrame(data = np.add(hp.sinData(3000,10), hp.cosData(3000,50)))#np.add(hp.sinData(1000,30), hp.sinData(1000,50)) #np.asarray(hp.sinData(1000,30))#hp.sinData(1000,30)#np.add(hp.sinData(1000,30), hp.sinData(1000,50))
     # s = data.iloc[0:1000]
 
     downSamplingSignal = downSampling(hp.readDataFromCSV("../input/weather_2017.CSV")[0:], 1)
@@ -133,7 +133,7 @@ def initialize_agent():
     # cnn_agent.on_init_properity(3,thresholdingVector)
     mlpagentsp.on_init_properity(40, thresholdingVector)
     mlpAgent.on_init_properity(15, thresholdingVector)
-    # copyYesterdayAgent.on_init_properity(thresholdingVector)
+    # copyYesterdayAgent.on_init_properity(thresholdingVect or)
     model1.on_init_properity(3, thresholdingVector)
     lstm_predictor100.on_init_properity(100, thresholdingVector)
     lstm_agent.on_init_properity(5, thresholdingVector)
@@ -146,6 +146,8 @@ def initialize_agent():
     lstm_agent.train(trainingData)
 
     mlpAgent.train(trainingData)
+
+    #mlpAgent.train(trainingData)
     modelsList.append(model1)
     modelsList.append(lstm_agent)
     modelsList.append(arimaAgent)
@@ -181,7 +183,6 @@ if __name__ == '__main__':
     lstmdeciderLog = []
     mlpdeciderLog = []
     majorityVotingLog = []
-    print(np.squeeze(financeData, axis=1))
 
     for i, d in enumerate(data):
         # In the loop for testing some probabilities
@@ -190,23 +191,18 @@ if __name__ == '__main__':
             #print("last five data:",data[i-4:i+1])
             #print("sending value:",d)
             #print("the mean of last five values",np.mean(data[:-5]))
-            print("i>7 data",np.expand_dims(np.mean(data[i-14:i+1]),axis=0))
-            print("i>7 finance data",np.expand_dims(np.mean(financeData[i-14:i+1]),axis=0))
             m1.message = [np.expand_dims(np.mean(data[i-14:i+1]),axis=0), i - 1,np.expand_dims(np.mean(financeData[i-14:i+1]),axis=0), testDataOriginal[i], originalFinanceSignal[i]]
         else:
-            print("i<7 data",d)
-            print("i<7 financeData",financeData[i])
             m1.message = [d, i - 1, financeData[i],testDataOriginal[i],originalFinanceSignal[i]]
-
+        print("financeData", data[i + 1])
         if i == 0:
             continue
-
         """
             Server broadcast the message that have been taking lately from database or real dataset  
         """
         server.server_broadcast(m1)
-        print(financeData[i])
-        print(len(data))
+
+
         """
             After server broadcasting the message and all messages had been reached to agents by server,the evaluater will be updated because of given reasons:
                 *Before agents will publish to their behaviours,evaluator should calculate their scores and return to these scores as object to server
@@ -243,7 +239,7 @@ if __name__ == '__main__':
             m1.message = modelsList[j].get_behaviourstate()
             m1.senderId = modelsList[j].uniqueId
             m1.messageType = "behaviourOfAgentNow"
-            majorityDeciderFeedBack.append(m1.message)
+            majorityDeciderFeedBack.append(float(m1.message))
             hp.communicateALLAgents(modelsList, m1.senderId, sendingObjectList)
         """
             Evaluator is sending their datas to majoritydecider to take a greater score than all agents behaviours 
@@ -253,7 +249,7 @@ if __name__ == '__main__':
                              "mlpDecider": m1, "majorityDecider": m1, "lstm_decider": m1}
         m1.message = majorityDeciderFeedBack
         m1.senderId = "evaluater"
-        print("message", m1.message)
+
         hp.communicateALLAgents(modelsList, m1.senderId, sendingObjectList)
 
         # Decider will be runned in this method because of its priority
@@ -297,7 +293,6 @@ if __name__ == '__main__':
         m1.messageType = "behaviourOfAgentNow"
         hp.communicateALLAgents(modelsList, m1.senderId, sendingObjectList)
         print("time:", i)
-        print("data:", financeData[i])
         print("Investmenlist:",modelsList[6].get_agent_total_money_list())
         print("GeneralScores:", modelsList[6].getAgentScores())
         print("PeriodicScores:", modelsList[6].getPeriodicScoreTableAgents())

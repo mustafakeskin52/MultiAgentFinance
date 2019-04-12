@@ -184,39 +184,40 @@ class GenericModel(nn.Module):
 
     #  Sklearn type model methods.
     def fit(self, X, y):
-        # fit(X, y)	Fit the model to data matrix X and target(s) y.
+            # fit(X, y)	Fit the model to data matrix X and target(s) y.
 
-            # xs = xs.unsqueeze(dim=1)
-            # ys = ys.unsqueeze(dim=1)
-            # xs = Variable(xs.float(), requires_grad=False)
-            # ys = Variable(ys.float(), requires_grad=False)
+                # xs = xs.unsqueeze(dim=1)
+                # ys = ys.unsqueeze(dim=1)
+                # xs = Variable(xs.float(), requires_grad=False)
+                # ys = Variable(ys.float(), requires_grad=False)
 
-            # if this call for validation or test, change model mode to evaluation
-            # this is necessary because dropout and batch normalization should behave differently on evaluation mode
-            self.optimizer.zero_grad()  # pytorch accumulates gradients.
+                # if this call for validation or test, change model mode to evaluation
+                # this is necessary because dropout and batch normalization should behave differently on evaluation mode
+                self.optimizer.zero_grad()  # pytorch accumulates gradients.
 
-            # xs = xs.to(self.device) # todo: do it in dataset class
+                # xs = xs.to(self.device) # todo: do it in dataset class
 
-            #print("outputs", self.labels.shape)
-            # forward
-            outputs = self.forward(X)
-            #time.sleep(1000)
-            # loss
-            loss = self.criterion(outputs, y)
+                #print("outputs", self.labels.shape)
+                # forward
+                #print("y",y)
+                outputs = self.forward(X)
+                #print("outputs",outputs)
+                # loss
+                loss = self.criterion(outputs, y)
 
 
-            self.current_loss = loss
+                self.current_loss = loss
 
-            # backward
-            if loss._grad_fn is not None:  # means we are in training mode
-                loss.backward(retain_graph=True)
-                # optimize
-                self.optimizer.step()
-                self.training_loss = self.current_loss
+                # backward
+                if loss._grad_fn is not None:  # means we are in training mode
+                    loss.backward(retain_graph=True)
+                    # optimize
+                    self.optimizer.step()
+                    self.training_loss = self.current_loss
 
-            # detach first hiddens of previous iteration
-            # if isinstance(self, LSTM):
-            #     self.detach()
+                # detach first hiddens of previous iteration
+                # if isinstance(self, LSTM):
+                #     self.detach()
 
     def validate(self, X, y):
         with torch.no_grad():
@@ -224,16 +225,18 @@ class GenericModel(nn.Module):
             self.validation_loss = self.current_loss
 
     def predict(self, X):
+
         # predict(X)	Predict using the multi-layer perceptron classifier
         with torch.no_grad():
             outputs = self.forward(X)
-            _, predicted = torch.max(outputs.data, 1)
-            return predicted
+            #print("outputs:",outputs.data)
+            #_, predicted = torch.max(outputs.data, 1)
+            return outputs
 
     def score(self, X, y):
         # score(X, y[, sample_weight])	Returns the mean accuracy on the given test data and labels.
         predicted = self.predict(X)
-        correct = (predicted == y).sum().item()
+        correct = (predicted - y).sum().item()
         return correct/(y.size()[0])
 
     def statisticalDatas(self,X,y,agentNumbers,labelDatas,inputDatas):
@@ -393,7 +396,7 @@ class LSTM(GenericModel):
         # todo: I have found that initialization destroys the learning process. Think why and fixit.
         # self.initialize()
 
-        self.criterion = nn.MSELoss
+        self.criterion = nn.L1Loss()
         self.optimizer = optim.Adam(self.parameters(), 0.005)
 
     def initialize(self):
@@ -447,7 +450,8 @@ class LSTM(GenericModel):
 
         # soft_out = self.softmax(fc_out)
         # log_softmax = F.log_softmax(fc_out, dim=1)
-        return F.log_softmax(fc_out, dim=1)
+
+        return torch.squeeze(fc_out)
 
     def dummy_input(self):
         return Variable(torch.rand(self.batch_size, 1, self.input_size, self.seq_length)).type(torch.FloatTensor).to(self.device)
@@ -463,7 +467,7 @@ class MLP(GenericModel):
         self.fc2 = nn.Linear(in_features=10, out_features=output_size)
 
         self.optimizer = optim.Adam(self.parameters(), lr=0.001)
-        self.criterion = nn.NLLLoss()
+        self.criterion = nn.L1Loss()
 
     def forward(self, x):
 
@@ -471,7 +475,7 @@ class MLP(GenericModel):
         out = self.fc1(x)
         out = self.fc2(out)
 
-        return F.log_softmax(out, dim=1)
+        return out
 
     def init_hidden(self):
         return None

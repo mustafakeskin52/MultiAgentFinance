@@ -141,19 +141,24 @@ class OnlineLearningFinancialData(GenericDataset):
             y = np.asarray(y)
 
             #seq_len, dataset_len,input_size
-            X = to_categorical(X,categoricalN)
-            print(X.shape)
+            #print(X)
+
+            #X = to_categorical(X,categoricalN)
+            #print(X.shape)
+
+            X = np.expand_dims(X,axis=2)
+
             X = X.transpose([1, 0, 2])
-            print(X.shape)
+           # print(X.shape)
 
             #y = self.binary_to_decimal(y)
 
            # print(np.array(X).shape)
             y = y.T
-            print(y)
+
 
             self.data = torch.FloatTensor(X)
-            self.labels = torch.LongTensor(y)
+            self.labels = torch.FloatTensor(y)
         def binary_to_decimal(self,y):
             result = []
             for i in range(y.shape[0]):
@@ -239,7 +244,7 @@ class MLPOnlineDataset(GenericDataset):
 
             # dataset_len,input_size
             self.data = torch.FloatTensor(datasetX)
-            self.labels = torch.LongTensor(datasetY)
+            self.labels = torch.FloatTensor(datasetY)
 
         def __len__(self):
             return self.data.shape[0]
@@ -278,9 +283,9 @@ class OnlineDeciderDataSet(GenericDataset):
 
         train_len = int(raw_dataset_x.shape[0] * train_valid_ration)
 
-        self.raw_dataset_x_training = raw_dataset_x[10:]
+        self.raw_dataset_x_training = raw_dataset_x[10:train_len]
         self.raw_dataset_x_validation = raw_dataset_x[train_len:]
-        self.raw_dataset_y_training = raw_dataset_y[10:]
+        self.raw_dataset_y_training = raw_dataset_y[10:train_len]
         self.raw_dataset_y_validation = raw_dataset_y[train_len:]
         print("raw_dataset_x_training",self.raw_dataset_x_training.shape)
         print("raw_dataset_y_training",self.raw_dataset_y_training.shape)
@@ -294,19 +299,22 @@ class OnlineDeciderDataSet(GenericDataset):
         def __init__(self, datasetX, datasetY, seq_len):
             X = []
             y = []
+
             for i in range(datasetX.shape[0] - seq_len):
                 X.append(datasetX[i:i + seq_len])
-                y.append(datasetY[i + seq_len])
+                y.append(datasetY[i+seq_len])
             X = np.asarray(X)
-            y = np.asarray(y)
-            # seq_len, dataset_len,input_size
-            X = to_categorical(X, 5)
-            X = X.reshape(X.shape[0],X.shape[1], X.shape[2] * X.shape[3])
+            y = np.squeeze(np.asarray(y),axis=1)
+
+            #seq_len, dataset_len,input_size
+            #X = to_categorical(X, 5)
+
             X = X.transpose([1, 0, 2])
             # print(np.array(X).shape)
             y = y.T
+
             self.data = torch.FloatTensor(X)
-            self.labels = torch.LongTensor(y)
+            self.labels = torch.FloatTensor(y)
 
         def __len__(self):
             return self.data.shape[1]

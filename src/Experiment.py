@@ -83,9 +83,7 @@ class Experiment:
         self.model.to_txt(directory=self.config.EXPERIMENT_DIR)
     def predict_lstm(self,X,categoricalN):
         # seq_len, dataset_len,input_size
-        X = convert_to_categorical(X, categoricalN)
         X = np.expand_dims(X,axis=0)
-
         predicted_label = self.model.predict(torch.FloatTensor(X)).cpu().detach()
         return predicted_label
     def predict_mlp_decider(self,X):
@@ -95,9 +93,6 @@ class Experiment:
     def predict_lstm_decider(self,X,categoricalN):
 
         X = np.expand_dims(X, axis=0)
-        X = convert_to_categorical(X, categoricalN)
-        X = X.reshape(X.shape[0], X.shape[1], X.shape[2] * X.shape[3])
-
         predicted_label = self.model.predict(torch.FloatTensor(X)).cpu().detach()
         return predicted_label
     def predict_cnn(self, X):

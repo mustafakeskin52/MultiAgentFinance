@@ -44,17 +44,4 @@ class ARIMAAgent(Model):
             self.model_fit = self.model.fit(disp=0)
         if len(self.dataMemory) > self.trainLength:
             output = self.model_fit.forecast()
-            predictionValue = output[0]
-            if predictionValue > self.thresholding[0]:
-                self.behaviourState = BehaviourState.HIGH_BUY
-            elif  predictionValue > self.thresholding[1]:
-                self.behaviourState = BehaviourState.BUY
-            elif predictionValue >self.thresholding[2]:
-                self.behaviourState = BehaviourState.NONE
-            elif predictionValue > self.thresholding[3]:
-                self.behaviourState = BehaviourState.SELL
-            else:
-                self.behaviourState = BehaviourState.LOW_SELL
-            self.lastPrediction = predictionValue
-        else:
-            self.lastPrediction = BehaviourState.NONE
+            self.behaviourState = output[0]

@@ -40,12 +40,12 @@ class MLPDecider(Model):
                  dataTime=self.dataTime)
     def train(self,dataX,dataY):
         data = dataset.MLPOnlineDataset(dataX=dataX,dataY=dataY)
-        self.model_lstm = model.MLP(input_size=6,output_size=5)
+        self.model_lstm = model.MLP(input_size=6,output_size=1)
         self.experiment = Experiment(config=self.config, model=self.model_lstm, dataset=data)
         self.experiment.run()
         #print("Predicted:",self.experiment.predict_lstm(classDatas[100:self.config.SEQ_LEN+100],self.config.INPUT_SIZE))
     def predict(self,dataX):
-        return np.asarray(self.experiment.predict_mlp_decider(dataX[-30:]))[-1]
+        return np.asarray(self.experiment.predict_mlp_decider(dataX[-30:]))
     # The method provide to send to message from self to another agent
     def dataToClassFunc(self, data, thresholding):
         result = np.zeros(data.shape[0])
@@ -64,12 +64,10 @@ class MLPDecider(Model):
     def evaluate_behaviour(self):
         t = self.dataTime[-1]
         classData = self.dataToClassFunc(np.asarray(self.dataMemory), self.thresholding)
-        print("self.agentsBeheviours",self.agentsBeheviours)
         self.dataX.append(self.agentsBeheviours)
-        print("dataTypeOfX",np.asarray(self.dataX).shape)
-        if (len(self.dataMemory) >= self.startPointOfTraining and len(self.dataMemory) % self.periodOfTraining == 0):
-            self.train(np.asarray(self.dataX), classData)
-        if len(self.dataMemory) > self.startPointOfTraining:
-            self.behaviourState = self.predict(np.asarray(self.dataX))
-        print("mlp_decider_state",self.behaviourState)
 
+        if (len(self.dataMemory) >= self.startPointOfTraining and len(self.dataMemory) % self.periodOfTraining == 0):
+            self.train(np.asarray(self.dataX), np.asarray(self.dataMemory))
+        if len(self.dataMemory) > self.startPointOfTraining:
+            self.behaviourState = self.predict(np.asarray(self.dataX))[-1]
+            print("MLP_DECIDER_BEHAVİOUR", self.behaviourState)

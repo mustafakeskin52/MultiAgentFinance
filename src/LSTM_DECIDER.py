@@ -21,7 +21,7 @@ class LSTM_DECIDER(Model):
     experiment = None
     trainLength = None
     thresholding = None
-    startPointOfTraining = 300
+    startPointOfTraining = 100
     periodOfTraining = 50
     def on_init_properity(self, trainLength, thresholding):
         self.trainLength = trainLength
@@ -47,7 +47,7 @@ class LSTM_DECIDER(Model):
         self.experiment.run()
         #print("Predicted:",self.experiment.predict_lstm(classDatas[100:self.config.SEQ_LEN+100],self.config.INPUT_SIZE))
     def predict(self,dataX):
-        return np.asarray(self.experiment.predict_lstm_decider(dataX[-self.config.SEQ_LEN:],5))[0]
+        return np.asarray(self.experiment.predict_lstm_decider(dataX[-self.config.SEQ_LEN:],5))
     # The method provide to send to message from self to another agent
     def dataToClassFunc(self, data, thresholding):
         result = np.zeros(data.shape[0])
@@ -66,13 +66,11 @@ class LSTM_DECIDER(Model):
     def evaluate_behaviour(self):
         t = self.dataTime[-1]
         classData = self.dataToClassFunc(np.asarray(self.dataMemory), self.thresholding)
-        self.agentsBeheviours.append(int(classData[-1]))#Original Increasing Class is being added to lstm input
-        print("self.agentsBeheviours",self.agentsBeheviours)
+        #self.agentsBeheviours.append(np.asarray(self.dataMemory)[-1])#Original Increasing Class is being added to lstm input
         self.dataX.append(self.agentsBeheviours)
-
         if (len(self.dataMemory) >= self.startPointOfTraining and len(self.dataMemory) % self.periodOfTraining == 0):
-            self.train(np.asarray(self.dataX), classData)
+            self.train(np.asarray(self.dataX), np.asarray(self.dataMemory))
         if len(self.dataMemory) > self.startPointOfTraining:
             self.behaviourState = self.predict(np.asarray(self.dataX))
-        print("lstm_decider",self.behaviourState)
+            print("LSTM_DECIDER_BEHAVİOUR",self.behaviourState)
 

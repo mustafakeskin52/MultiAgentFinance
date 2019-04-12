@@ -41,13 +41,4 @@ class RSIAgent(Model):
 
             Rs = AvgU/AvgD
             RSI = 100 - 100/(1 + Rs)
-            if RSI > 65:
-                self.behaviourState = BehaviourState.HIGH_BUY
-            elif RSI > 55:
-                self.behaviourState = BehaviourState.BUY
-            elif RSI > 45:
-                self.behaviourState = BehaviourState.NONE
-            elif RSI > 35:
-                self.behaviourState = BehaviourState.SELL
-            else:
-                self.behaviourState = BehaviourState.LOW_SELL
+            self.behaviourState = RSI*2-100

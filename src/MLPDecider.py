@@ -40,7 +40,7 @@ class MLPDecider(Model):
                  dataTime=self.dataTime)
     def train(self,dataX,dataY):
         data = dataset.MLPOnlineDataset(dataX=dataX,dataY=dataY)
-        self.model_lstm = model.MLP(input_size=6,output_size=1)
+        self.model_lstm = model.MLP(input_size=1,output_size=1)
         self.experiment = Experiment(config=self.config, model=self.model_lstm, dataset=data)
         self.experiment.run()
         #print("Predicted:",self.experiment.predict_lstm(classDatas[100:self.config.SEQ_LEN+100],self.config.INPUT_SIZE))

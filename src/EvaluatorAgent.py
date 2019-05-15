@@ -1,9 +1,16 @@
 from ModelAgent import Model
 from MessageType import BehaviourState
 import numpy as np
+import math
+import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix
 import time
 import dill
+from tempfile import TemporaryFile
+
+from scipy.spatial.distance import euclidean
+from fastdtw import fastdtw
+
 #Evaluator agent  receives data from other agents that try to  predict the next value of data that has a financial problem or any classification problem
 class BehaviourState:
     HIGH_BUY = 4
@@ -30,7 +37,7 @@ class EvaluatorAgent(Model):
     # When evaluater receive a message from any agent it run receive_agent function
 
     def receive_agent_message(self,recevingObjectFromAgent):
-        print("timesd:",len(self.dataClassMemory))
+
         if len(self.dataClassMemory) > self.startPointScoresCalc:
             if self.agentPredictionList.__contains__(recevingObjectFromAgent.senderId):
                 self.agentPredictionList[recevingObjectFromAgent.senderId].append(recevingObjectFromAgent.message)
@@ -83,26 +90,30 @@ class EvaluatorAgent(Model):
     #This score show that all of agents succeed to predict next value of datas rightly.
     #This score is a rate over 1.00
     def updateScores(self):
+        realList = []
+        data_length = 0;
         for key in self.agentPredictionList:
+
             print("Evaluation of the :",key)
             tempPredictionList = np.squeeze(np.asarray(self.agentPredictionList[key]))
             realList = np.squeeze(np.asarray(self.dataClassMemory[-tempPredictionList.size:]))
 
+            #if data_length % 50 == 0:
+             #   plt.plot(tempPredictionList)
             print("Loss:",np.mean(np.square(tempPredictionList - realList)))
             print("Score",np.count_nonzero(tempPredictionList*realList>0)/tempPredictionList.size)
-            #confusionmatrix = confusion_matrix(realList, tempPredictionList, labels=[4, 3, 2,1,0])
-           # np.set_printoptions(precision=2)
-            #To normalize row of the confusion matrix
-            drawConfusionMatrix = []
-            #for i, d in enumerate(np.sum(confusionmatrix,axis=1)):
-            #    drawConfusionMatrix.append(confusionmatrix[i, :] / d)
+            np.save(key, np.squeeze(np.asarray(self.agentPredictionList[key])))
 
-            #print(np.asarray(drawConfusionMatrix))
-            #print(np.sum(confusionmatrix,axis=1))
-            #self.overallscoreAgents[key] = np.sum(tempPredictionList == realList) / len(realList)
+            print("Corelation between lstm decider and ", key)
+            print(np.corrcoef(tempPredictionList,np.squeeze(np.asarray(self.agentPredictionList["lstm_decider"]))))
+            distance, path = fastdtw(np.expand_dims(np.squeeze(np.asarray(self.agentPredictionList["lstm_decider"])),axis=0), np.expand_dims(tempPredictionList,axis=0), dist=euclidean)
+            print("Prediction distance between lstm decider and",key)
+            print(distance)
 
-        # This score give a frame succeed rate.It is different from updateScores due to it calculate truth table of a period of data
-        # And it return a table that filled with true or not
+
+       # plt.plot(np.random.rand(30))  # plotting t, b separately
+       # plt.legend()
+       # plt.show()
 
     def calcLastBehavioursAgents(self):
         for key in self.agentPredictionList:
@@ -138,6 +149,9 @@ class EvaluatorAgent(Model):
         return self.scoreOfTheLastBehaviours
     def getPeriodicScoreTableAgents(self):
         return self.periodicScoreTableAgents
+    def getreallist(self):
+        tempPredictionList = np.squeeze(np.asarray(self.agentPredictionList["lstm_decider"]))
+        return np.squeeze(np.asarray(self.dataClassMemory[-tempPredictionList.size:]))
     #to update flowing of evaluater agent
     #In addition,this update code is including also the piece of code to calculate real behaviour of data
     #After real behaviours of data are calculated,at difference between real value and prediction  is calculated
@@ -163,6 +177,7 @@ class EvaluatorAgent(Model):
             elif receivingObjectFromServer.message[3] > self.thresholdArray[3]:
                 temp = BehaviourState.SELL
             else:
+
                 temp = BehaviourState.LOW_SELL
         self.dataTime.append(receivingObjectFromServer.message[1])
         self.dataClassMemory.append(receivingObjectFromServer.message[3])

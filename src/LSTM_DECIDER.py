@@ -68,6 +68,7 @@ class LSTM_DECIDER(Model):
         classData = self.dataToClassFunc(np.asarray(self.dataMemory), self.thresholding)
         #self.agentsBeheviours.append(np.asarray(self.dataMemory)[-1])#Original Increasing Class is being added to lstm input
         self.dataX.append(self.agentsBeheviours)
+        print("the shape of dataX:",len(self.dataX[0]))
         if (len(self.dataMemory) >= self.startPointOfTraining and len(self.dataMemory) % self.periodOfTraining == 0):
             self.train(np.asarray(self.dataX), np.asarray(self.dataMemory))
         if len(self.dataMemory) > self.startPointOfTraining:

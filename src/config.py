@@ -45,7 +45,7 @@ class ConfigLSTM(GenericConfig):
 
         self.DATASET_NAME = 'ToyDatalet'
         # Experiment params
-        self.EPOCH_SIZE = 5
+        self.EPOCH_SIZE = 50
         self.EXPERIMENT_DIR = '../experiment/{}/{}'.format(self.DATASET_NAME, str(int(time.time())))
 
         # Dataloader params
@@ -61,7 +61,7 @@ class ConfigLSTM(GenericConfig):
 class ConfigMLP(GenericConfig):
     def __init__(self):
         GenericConfig.__init__(self)
-        self.EPOCH_SIZE = 50
+        self.EPOCH_SIZE = 5
         # Dataloader params
         self.TRAIN_SHUFFLE = False
         self.VALID_SHUFFLE = False
@@ -98,7 +98,7 @@ class ConfigLSTMForDecider(GenericConfig):
         self.VALID_BATCH_SIZE = 1
 
         # Model params
-        self.INPUT_SIZE = 6
+        self.INPUT_SIZE = 1
         self.OUTPUT_SIZE = 1
         self.SEQ_LEN = 25
 class ConfigCNN(GenericConfig):

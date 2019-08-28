@@ -58,11 +58,11 @@ def downSampling(signal, periodicDownSampling):
 
 
 def initialize_agent():
-    trainingRate = 0.70
+    trainingRate = 0.50
     # downSamplingSignal = pd.DataFrame(data = np.add(hp.sinData(3000,40),hp.cosData(3000,80)))#pd.DataFrame(data = np.add(hp.sinData(3000,10), hp.cosData(3000,50)))#np.add(hp.sinData(1000,30), hp.sinData(1000,50)) #np.asarray(hp.sinData(1000,30))#hp.sinData(1000,30)#np.add(hp.sinData(1000,30), hp.sinData(1000,50))
     # s = data.iloc[0:1000]
 
-    downSamplingSignal = downSampling(hp.readDataFromCSV("../input/weather_2017.CSV")[0:], 1)
+    downSamplingSignal = downSampling(hp.readDataFromCSV("../input/AMD.csv")[0:], 7)
     s = pd.DataFrame(data=downSamplingSignal)  # pd.Series(downSamplingSignal)
     # s = pd.rolling_mean(s,30)[40:]
 
@@ -101,7 +101,6 @@ def initialize_agent():
     # trainingdata = trainingdata.squeeze(axis=1)
 
     """
-
     """
     # s = pd.Series(hp.readDataFromCSV("AMD.CSV")[9000:9400])
     # s = data[1000:3000]
@@ -155,11 +154,12 @@ def initialize_agent():
 
     # mlpAgent.train(trainingData)
     modelsList.append(model1)
-    #modelsList.append(arimaAgent)
+    modelsList.append(arimaAgent)
 
-    #modelsList.append(rsiAgent)
+    modelsList.append(rsiAgent)
     #modelsList.append(mlpAgent)
     #modelsList.append(mlpagentsp)
+    #modelsList.append(lstm_agent)
     # modelsList.append(cnn_agent)
     modelsList.append(evaluate_agent)
     modelsList.append(imitator)
@@ -188,9 +188,9 @@ if __name__ == '__main__':
     lstmdeciderLog = []
     mlpdeciderLog = []
     majorityVotingLog = []
-    np.save("originaldata",data)
+
     for i, d in enumerate(data):
-        N = 1;
+        N = 3;
 
         # In the loop for testing some probabilities
         majorityDeciderFeedBack = []
@@ -221,7 +221,7 @@ if __name__ == '__main__':
             In this part of the agent.py code main loop after evaluater collects behaviours of the agents ,they decided to broadcast it to imitator.
             Therefore,at the first part of the code might be sended to a empty behaviours to the agents  
         """
-        sendingObjectList = {"LinearRegFor3Day": None, "evaluater": None, "imitator": m1,
+        sendingObjectList = {"LinearRegFor3Day": None,"arima":None,"rsiAgent":None,"evaluater": None, "imitator": m1,
                              "mlpDecider": None,
                              "majorityDecider": None, "lstm_decider": None}
         m1.message = modelsList[N].getLastBehavioursAgents()
@@ -240,18 +240,19 @@ if __name__ == '__main__':
         """
             All decisions is sending to evaluater before running majoritydecider or any decider agent.
         """
-        sendingObjectList = {"LinearRegFor3Day": None, "evaluater": m1,
+        sendingObjectList = {"LinearRegFor3Day": None,"arima":None,"rsiAgent":None, "evaluater": m1,
                              "imitator": None, "mlpDecider": None, "majorityDecider": None, "lstm_decider": None}
         for j in range(0, N, 1):
             m1.message = modelsList[j].get_behaviourstate()
             m1.senderId = modelsList[j].uniqueId
+            print(modelsList[j].uniqueId)
             m1.messageType = "behaviourOfAgentNow"
             majorityDeciderFeedBack.append(float(m1.message))
             hp.communicateALLAgents(modelsList, m1.senderId, sendingObjectList)
         """
             Evaluator is sending their datas to majoritydecider to take a greater score than all agents behaviours 
         """
-        sendingObjectList = {"LinearRegFor3Day": None,"evaluater": None,
+        sendingObjectList = {"LinearRegFor3Day": None,"arima":None,"rsiAgent":None,"evaluater": None,
                              "imitator": None,
                              "mlpDecider": m1, "majorityDecider": m1, "lstm_decider": m1}
         m1.message = majorityDeciderFeedBack
@@ -269,7 +270,7 @@ if __name__ == '__main__':
             The purpose of  the majority decider algoritms must obtain a greater score than all agents.Hence,evaluater agents will be 
             argumentative. 
         """
-        sendingObjectList = {"LinearRegFor3Day": None,"evaluater": m1, "imitator": None,
+        sendingObjectList = {"LinearRegFor3Day": None,"arima":None,"rsiAgent":None,"evaluater": m1, "imitator": None,
                              "mlpDecider": None,
                              "majorityDecider": None, "lstm_decider": None}
 
@@ -291,7 +292,7 @@ if __name__ == '__main__':
             Imitator object might be considered as a lstm that try to improve all agents performences.
             The differences between imitator and decider agents is that lstm might be more successful than classical decider according to our plan
         """
-        sendingObjectList = {"LinearRegFor3Day": None,"evaluater": None, "imitator": m1,
+        sendingObjectList = {"LinearRegFor3Day": None,"arima":None,"rsiAgent":None,"evaluater": None, "imitator": m1,
                              "mlpDecider": None,
                              "majorityDecider": None, "lstm_decider": None}
         m1.message = modelsList[N].getAgentLastPredictionList()

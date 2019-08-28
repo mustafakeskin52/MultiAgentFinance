@@ -22,7 +22,7 @@ class LSTM_DECIDER(Model):
     trainLength = None
     thresholding = None
     startPointOfTraining = 100
-    periodOfTraining = 50
+    periodOfTraining = 500
     def on_init_properity(self, trainLength, thresholding):
         self.trainLength = trainLength
         self.thresholding = thresholding
@@ -69,7 +69,10 @@ class LSTM_DECIDER(Model):
         #self.agentsBeheviours.append(np.asarray(self.dataMemory)[-1])#Original Increasing Class is being added to lstm input
         self.dataX.append(self.agentsBeheviours)
         print("the shape of dataX:",len(self.dataX[0]))
-        if (len(self.dataMemory) >= self.startPointOfTraining and len(self.dataMemory) % self.periodOfTraining == 0):
+        # or (len(self.dataMemory) > self.startPointOfTraining and len(self.dataMemory) % self.periodOfTraining == 0)
+        #This call help to ensure consistency at the some period of process which can be set by user flexible to its purposes.
+        #Now it has just called only one time at the beginning of the validation state while the traning process is starting
+        if (len(self.dataMemory) == self.startPointOfTraining):
             self.train(np.asarray(self.dataX), np.asarray(self.dataMemory))
         if len(self.dataMemory) > self.startPointOfTraining:
             self.behaviourState = self.predict(np.asarray(self.dataX))

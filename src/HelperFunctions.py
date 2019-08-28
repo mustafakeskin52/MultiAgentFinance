@@ -79,7 +79,7 @@ def cosData(fs,f):
     return [np.cos(2 * np.pi * f * (i / fs)) for i in x]
 def readDataFromCSV(path):
    spy = pd.read_csv(path)
-   data = spy['temperature'].values.astype(str)
+   data = spy['Adj Close'].values.astype(str)
    return data.astype(float)
 def loadDatas(modelsList,fileName):
     for i in range(len(modelsList)):

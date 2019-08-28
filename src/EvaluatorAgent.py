@@ -103,7 +103,7 @@ class EvaluatorAgent(Model):
             print("Loss:",np.mean(np.square(tempPredictionList - realList)))
             print("Score",np.count_nonzero(tempPredictionList*realList>0)/tempPredictionList.size)
             np.save(key, np.squeeze(np.asarray(self.agentPredictionList[key])))
-
+            np.save("originaldata", realList)
             print("Corelation between lstm decider and ", key)
             print(np.corrcoef(tempPredictionList,np.squeeze(np.asarray(self.agentPredictionList["lstm_decider"]))))
             distance, path = fastdtw(np.expand_dims(np.squeeze(np.asarray(self.agentPredictionList["lstm_decider"])),axis=0), np.expand_dims(tempPredictionList,axis=0), dist=euclidean)

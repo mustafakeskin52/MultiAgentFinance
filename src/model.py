@@ -380,16 +380,16 @@ class LSTM(GenericModel):
                             dropout=0,  # 0 means no probability
                             bidirectional=False)
 
-        self.fc = nn.Sequential(nn.Linear(in_features=self.hidden_size, out_features=10),
+        self.fc = nn.Sequential(nn.Linear(in_features=self.hidden_size, out_features=30),
                                 # nn.BatchNorm1d(num_features=100),  # todo: test batchnorm
                                 nn.ReLU(),  # todo: test ReLU vs SELU
-                                nn.Linear(in_features=10, out_features=10),
+                                nn.Linear(in_features=30, out_features=30),
                                 # nn.BatchNorm1d(num_features=100),
                                 nn.ReLU(),
-                                nn.Linear(in_features=10, out_features=10),
+                                nn.Linear(in_features=30, out_features=30),
                                 # nn.BatchNorm1d(num_features=10),
                                 nn.ReLU(),
-                                nn.Linear(in_features=10, out_features=self.out_size))
+                                nn.Linear(in_features=30, out_features=self.out_size))
 
         self.hidden = None
 
